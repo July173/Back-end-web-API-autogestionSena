@@ -1,16 +1,16 @@
-USE bdautogestion;
+USE `bdautogestion`;
 
-INSERT INTO support_contact (id, type, label, value, extra_info, active, delete_at) VALUES
+INSERT INTO `support_contact` (`id`, `type`, `label`, `value`, `extra_info`, `active`, `delete_at`) VALUES
   (1, 'Email', 'Soporte por correo electrónico', 'servicio@sena.edu.co', 'Respuesta en 24-48 horas', 1, NULL),
   (2, 'Teléfono', 'Línea gratuita nacional', '01 8000 910 270', 'Lunes a viernes: 7:00 AM - 7:00 PM', 1, NULL),
   (3, 'Enlaces útiles', 'Sofia Plus - Oferta Educativa', 'https://betowa.sena.edu.co/', 'enlace', 1, NULL);
 
-INSERT INTO support_schedule (id, day_range, hours, is_closed, notes, active, delete_at) VALUES
+INSERT INTO `support_schedule` (`id`, `day_range`, `hours`, `is_closed`, `notes`, `active`, `delete_at`) VALUES
   (1, 'Lunes a Viernes', '7:00 AM - 7:00 PM', 0, NULL, 1, NULL),
   (2, 'Sábados', '8:00 AM - 4:00 PM', 0, NULL, 1, NULL),
   (3, 'Domingos y festivos', 'Ninguna', 1, NULL, 1, NULL);
 
-INSERT INTO type_contract (id, name, description, active, delete_at) VALUES
+INSERT INTO `type_contract` (`id`, `name`, `description`, `active`, `delete_at`) VALUES
   (1, 'Planta', 'Contrato estable y permanente, con todos los beneficios de ley.', 1, NULL),
   (2, 'Contrato', 'Acuerdo laboral que puede ser por tiempo definido o indefinido.', 1, NULL),
   (3, 'OPS', 'Orden de Prestación de Servicios. Sin relación laboral.', 1, NULL),
@@ -18,13 +18,13 @@ INSERT INTO type_contract (id, name, description, active, delete_at) VALUES
   (5, 'Temporal', 'Vinculación por periodo limitado para necesidad específica.', 1, NULL),
   (6, 'Prestación de Servicios', 'Contrato civil/comercial por actividad determinada.', 1, NULL);
 
-INSERT INTO type_of_queries (id, name, description, active, delete_at) VALUES
+INSERT INTO `type_of_queries` (`id`, `name`, `description`, `active`, `delete_at`) VALUES
   (1, 'Soporte Técnico', 'Para consultas técnicas del sistema', 1, NULL),
   (2, 'Consulta Académica', 'Para consultas académicas del sistema', 1, NULL),
   (3, 'Problemas con la plataforma', 'Para consulta sobre problemas con el sistema', 1, NULL),
   (4, 'Otros', 'Para consulta sobre el sistema', 1, NULL);
 
-INSERT INTO document_type (id, name, acronyms, active, delete_at) VALUES
+INSERT INTO `document_type` (`id`, `name`, `acronyms`, `active`, `delete_at`) VALUES
   (1, 'Cédula de Ciudadanía', 'CC', 1, NULL),
   (2, 'Tarjeta de Identidad', 'TI', 1, NULL),
   (3, 'Cédula de Extranjería', 'CE', 1, NULL),
@@ -34,10 +34,10 @@ INSERT INTO document_type (id, name, acronyms, active, delete_at) VALUES
   (7, 'Número de Identificación Tributaria', 'NIT', 1, NULL),
   (8, 'Permiso por Protección Temporal', 'PERMISO_TEMPORAL', 1, NULL);
 
-INSERT INTO knowledge_area (id, name, description, active, delete_at) VALUES
+INSERT INTO `knowledge_area` (`id`, `name`, `description`, `active`, `delete_at`) VALUES
   (1, 'Diseño', 'Pertenece al área de diseño', 1, NULL);
 
-INSERT INTO regional (id, name, code_regional, description, address, active, delete_at) VALUES
+INSERT INTO `regional` (`id`, `name`, `code_regional`, `description`, `address`, `active`, `delete_at`) VALUES
 (1, 'Distrito Capital', '001', 'Regional que atiende Bogotá D.C. con formación técnica y tecnológica especializada', 'Calle 57 No. 8-69, Bogotá D.C.', true, NULL),
 (2, 'Antioquia', '002', 'Regional de Antioquia enfocada en industria, servicios y desarrollo empresarial', 'Calle 52 No. 48-30, Medellín, Antioquia', true, NULL),
 (3, 'Valle del Cauca', '003', 'Regional del Valle especializada en agroindustria y servicios portuarios', 'Carrera 15 No. 14-50, Cali, Valle del Cauca', true, NULL),
@@ -49,7 +49,7 @@ INSERT INTO regional (id, name, code_regional, description, address, active, del
 (9, 'Bolívar', '009', 'Regional de Bolívar con énfasis en turismo, logística y servicios portuarios', 'Calle 30 No. 17-25, Cartagena, Bolívar', true, NULL),
 (10, 'Meta', '010', 'Regional del Meta enfocada en ganadería, agricultura y petróleo', 'Calle 32 No. 28-15, Villavicencio, Meta', true, NULL);
 
-INSERT INTO center (id, name, code_center, address, active, delete_at, regional_id) VALUES
+INSERT INTO `center` (`id`, `name`, `code_center`, `address`, `active`, `delete_at`, `regional_id`) VALUES
 (1, 'Centro de Biotecnología Agropecuaria', '001001', 'Calle 166 No. 52-05, Bogotá D.C.', true, NULL, 1),
 (2, 'Centro de Diseño y Metrología', '001002', 'Calle 52 No. 13-65, Bogotá D.C.', true, NULL, 1),
 (3, 'Centro de Electricidad y Automatización Industrial', '001003', 'Calle 57 No. 8-69, Bogotá D.C.', true, NULL, 1),
@@ -77,7 +77,7 @@ INSERT INTO center (id, name, code_center, address, active, delete_at, regional_
 (25, 'Centro de la Macarena', '010001', 'Calle 32 No. 28-15, Villavicencio, Meta', true, NULL, 10),
 (26, 'Centro Agropecuario La Macarena', '010002', 'Carrera 11 No. 15-30, Villavicencio, Meta', true, NULL, 10);
 
-INSERT INTO sede (id, name, code_sede, address, phone_sede, email_contact, active, delete_at, center_id) VALUES
+INSERT INTO `sede` (`id`, `name`, `code_sede`, `address`, `phone_sede`, `email_contact`, `active`, `delete_at`, `center_id`) VALUES
 (1, 'Sede Principal Biotecnología', '001001001', 'Calle 166 No. 52-05, Bogotá D.C.', '6015461500', 'biotecnologia@sena.edu.co', true, NULL, 1),
 (2, 'Sede Ricaurte', '001001002', 'Carrera 13 No. 65-10, Bogotá D.C.', '6015461501', 'ricaurte@sena.edu.co', true, NULL, 1),
 (3, 'Sede Principal Diseño', '001002001', 'Calle 52 No. 13-65, Bogotá D.C.', '6015461500', 'diseno@sena.edu.co', true, NULL, 2),
@@ -130,28 +130,26 @@ INSERT INTO sede (id, name, code_sede, address, phone_sede, email_contact, activ
 (50, 'Sede Agropecuario Macarena', '010002001', 'Carrera 11 No. 15-30, Villavicencio, Meta', '6086620400', 'agropecuario.meta@sena.edu.co', true, NULL, 26),
 (51, 'Sede Granada', '010002002', 'Carrera 9 No. 10-15, Granada, Meta', '6086620402', 'granada@sena.edu.co', true, NULL, 26);
 
-INSERT INTO program (id, name, code_program, description, active, delete_at) VALUES
+INSERT INTO `program` (`id`, `name`, `code_program`, `description`, `active`, `delete_at`) VALUES
   (1, 'Análisis y Desarrollo de Software', 1001, 'Programa de desarrollo', 1, NULL),
   (2, 'Diseño Gráfico', 1002, 'Programa de diseño', 1, NULL);
 
-INSERT INTO ficha (id, file_number, type_modality, active, delete_at, program_id) VALUES
+INSERT INTO `ficha` (`id`, `file_number`, `type_modality`, `active`, `delete_at`, `program_id`) VALUES
   (1, 2901817, 'Presencial', 1, NULL, 1),
   (2, 2901885, 'Virtual', 1, NULL, 2);
 
-INSERT INTO modality_productive_stage (id, name_modality, description, active, delete_at) VALUES
+INSERT INTO `modality_productive_stage` (`id`, `name_modality`, `description`, `active`, `delete_at`) VALUES
   (1, 'Contrato de aprendizaje', 'El aprendiz desarrolla su etapa práctica con contrato de aprendizaje', 1, NULL),
   (2, 'Vínculo Laboral', 'El aprendiz desarrolla su etapa práctica con vinculo laboral', 1, NULL),
   (3, 'Vínculo Formativo', 'El aprendiz desarrolla su etapa práctica con vinculo formativo', 1, NULL),
   (4, 'Proyecto Productivo', 'El aprendiz desarrolla su etapa práctica con proyecto productivo', 1, NULL),
   (5, 'Unidad Productiva Familiar', 'El aprendiz desarrolla su etapa práctica con unidad productiva familiar', 1, NULL),
   (6, 'Monitoria', 'El aprendiz desarrolla su etapa práctica con monitoria', 1, NULL);
-  
 
-
-INSERT INTO legal_document (id, type, title, effective_date, last_update, active, delete_at) VALUES
+INSERT INTO `legal_document` (`id`, `type`, `title`, `effective_date`, `last_update`, `active`, `delete_at`) VALUES
   (1, 'terms', 'Términos y condiciones', '2025-10-01', '2025-10-01', 1, NULL);
 
-INSERT INTO legal_section (id, order, code, title, content, active, delete_at, document_id, parent_id) VALUES
+INSERT INTO `legal_section` (`id`, `order`, `code`, `title`, `content`, `active`, `delete_at`, `document_id`, `parent_id`) VALUES
   (1, 1, '1', 'Aceptación de los términos', 'Al acceder y utilizar los servicios del SENA (Servicio Nacional de Aprendizaje), usted acepta estar sujeto a estos términos y condiciones de uso. Si no está de acuerdo con alguno de estos términos, no debe utilizar nuestros servicios. El SENA se reserva el derecho de modificar estos términos en cualquier momento. Las modificaciones entrarán en vigor inmediatamente después de su publicación en este sitio web.', 1, NULL, 1, NULL),
   (2, 2, '2', 'Descripción de los servicios', 'El SENA ofrece formación profesional integral gratuita en los siguientes servicios:\n - Programas de formación técnica y tecnológica\n - Cursos complementarios virtuales y presenciales\n - Servicios de empleabilidad y emprendimiento\n - Plataformas educativas digitales (Sofia Plus, LMS SENA)\n - Servicios de bienestar al aprendiz\n - Certificación de competencias laborales', 1, NULL, 1, NULL),
   (3, 3, '3', 'Obligaciones del usuario', NULL, 1, NULL, 1, NULL),
@@ -163,10 +161,10 @@ INSERT INTO legal_section (id, order, code, title, content, active, delete_at, d
   (9, 1, '3.1', 'Requisitos de registro', '- Proporcionar información verdadera, precisa y completa\n - Mantener actualizada su información personal\n - Ser responsables de la confidencialidad de sus credenciales\n - Cumplir con los requisitos académicos establecidos', 1, NULL, 1, 3),
   (10, 2, '3.2', 'Conducta del usuario', '- Respetar las normas de convivencia institucional\n - No utilizar los servicios para fines ilegales o no autorizados\n - Mantener un comportamiento ético y profesional\n - Respetar los derechos de propiedad intelectual\n - No compartir contenido inapropiado o ofensivo', 1, NULL, 1, 3);
 
-INSERT INTO legal_document (id, type, title, effective_date, last_update, active, delete_at) VALUES
+INSERT INTO `legal_document` (`id`, `type`, `title`, `effective_date`, `last_update`, `active`, `delete_at`) VALUES
   (2, 'privacy', 'Política de privacidad', '2025-10-01', '2025-10-01', 1, NULL);
 
-INSERT INTO legal_section (id, order, code, title, content, active, delete_at, document_id, parent_id) VALUES
+INSERT INTO `legal_section` (`id`, `order`, `code`, `title`, `content`, `active`, `delete_at`, `document_id`, `parent_id`) VALUES
   (11, 1, '1', 'Información que recopilamos', NULL, 1, NULL, 2, NULL),
   (12, 1, '1.1', 'Información personal', 'Nombres y apellidos completos\nNúmero de identificación\nFecha de nacimiento\nDirección de residencia\nCorreo electrónico\nNúmero de teléfono\nInformación académica y profesional\nEstado socioeconómico (cuando aplique)', 1, NULL, 2, 11),
   (13, 2, '1.2', 'Información técnica', 'Dirección IP\nTipo de navegador y versión\nSistema operativo\nPáginas visitadas y tiempo de permanencia\nCookies y tecnologías similares', 1, NULL, 2, 11),
@@ -185,12 +183,12 @@ INSERT INTO legal_section (id, order, code, title, content, active, delete_at, d
   (26, 6, '6', 'Retención de datos', 'Datos académicos: permanentes para efectos de certificación\nDatos de contacto: mientras mantenga relación activa con el SENA\nDatos técnicos: máximo 2 años\nDatos financieros: según legislación contable y tributaria', 1, NULL, 2, NULL),
   (27, 7, '7', 'Menores de edad', 'Los menores de edad pueden utilizar nuestros servicios con el consentimiento de sus padres o tutores legales. \nMedidas adicionales:\n- Verificación del consentimiento parental\n- Limitación en la recopilación de datos personales\n- Supervisión adicional en el procesamiento de datos\n- Derechos especiales de eliminación de datos', 1, NULL, 2, NULL);
 
-INSERT INTO module (id, name, description, active, delete_at) VALUES
+INSERT INTO `module` (`id`, `name`, `description`, `active`, `delete_at`) VALUES
   (1, 'Inicio', 'Parte inicial del sistema', 1, NULL),
   (2, 'Seguridad', 'Administra el sistema', 1, NULL),
   (3, 'Asignar seguimientos', 'Proceso de asignación y seguimiento de etapa práctica', 1, NULL);
 
-INSERT INTO form (id, name, description, path, active, delete_at) VALUES
+INSERT INTO `form` (`id`, `name`, `description`, `path`, `active`, `delete_at`) VALUES
   (1, 'Administración', 'Sección de control de administración del sistema (módulo seguridad)', '/admin', 1, NULL),
   (2, 'Registro Masivo', 'Registro de usuarios masivamente mediante plantillas de excel', '/mass-registration', 1, NULL),
   (3, 'Inicio', 'Inicio del sistema', '/home', 1, NULL),
@@ -204,14 +202,14 @@ INSERT INTO form (id, name, description, path, active, delete_at) VALUES
 	(11, 'Valoración solicitud', 'Instructor valora previamente una solictud', '/application-evaluation', 1, NULL);
 
 
-INSERT INTO permission (id, type_permission, description, delete_at, active) VALUES
+INSERT INTO `permission` (`id`, `type_permission`, `description`, `delete_at`, `active`) VALUES
   (1, 'Ver', 'Visualizar los datos', NULL, 1),
   (2, 'Editar', 'Editar los datos', NULL, 1),
   (3, 'Registrar', 'Ingresar datos nuevos', NULL, 1),
   (4, 'Eliminar', 'Eliminar permanentemente datos', NULL, 1),
   (5, 'Activar', 'Activar datos', NULL, 1);
 
-INSERT INTO role (id, type_role, description, active, delete_at) VALUES
+INSERT INTO `role` (`id`, `type_role`, `description`, `active`, `delete_at`) VALUES
   (1, 'Administrador', 'Administra y tiene acceso absoluto al sistema', 1, NULL),
   (2, 'Aprendiz', 'Accede a sus secciones permitidas en el sistema', 1, NULL),
   (3, 'Instructor', 'Accede a sus secciones permitidas en el sistema', 1, NULL),
@@ -219,7 +217,7 @@ INSERT INTO role (id, type_role, description, active, delete_at) VALUES
   (5, 'Operador de Sofia Plus', 'Revisa las asignaciones y hace el proceso en sofia plus', 1, NULL);
 
 
-INSERT INTO form_module (id, active, deleted_at, form_id, module_id) VALUES
+INSERT INTO `form_module` (`id`, `active`, `deleted_at`, `form_id`, `module_id`) VALUES
 	(1, 1, NULL, 1, 2),
 	(2, 1, NULL, 2, 2),
 	(3, 1, NULL, 3, 1),
@@ -232,7 +230,7 @@ INSERT INTO form_module (id, active, deleted_at, form_id, module_id) VALUES
 	(10, 1, NULL, 10, 3),
 	(11, 1, NULL, 11, 3);
 
-INSERT INTO role_form_permission (id, role_id, form_id, permission_id, delete_at, active) VALUES
+INSERT INTO `role_form_permission` (`id`, `role_id`, `form_id`, `permission_id`, `delete_at`, `active`) VALUES
 (1, 2, 3, 1, NULL, true),
 (2, 3, 3, 1, NULL, true),
 (3, 2, 4, 1, NULL, true),
@@ -346,30 +344,30 @@ INSERT INTO role_form_permission (id, role_id, form_id, permission_id, delete_at
 
 
 
-INSERT INTO person (id, first_name, second_name, first_last_name, second_last_name, phone_number, number_identification, image, active, delete_at, type_identification_id) VALUES
+INSERT INTO `person` (`id`, `first_name`, `second_name`, `first_last_name`, `second_last_name`, `phone_number`, `number_identification`, `image`, `active`, `delete_at`, `type_identification_id`) VALUES
 	(1, 'July', '', 'Ramos', '', 3125647896, 1032679504, '', 1, NULL, 1),
   (2, 'Daniela', '', 'Ramos', '', 3125647896, 1032679503, '', 1, NULL, 1),
   (3, 'Ramos', '', 'Sena', '', 3125647897, 1098765431, '', 1, NULL, 1),
   (4, 'Paola', '', 'Sena', '', 3125647897, 1098765432, '', 1, NULL, 1);
 
-INSERT INTO apprentice (id, active, delete_at, ficha_id, person_id) VALUES
+INSERT INTO `apprentice` (`id`, `active`, `delete_at`, `ficha_id`, `person_id`) VALUES
 	(1, 1, NULL, NULL, 1);
 
-INSERT INTO instructor ( id, contract_start_date,  contract_end_date,  assigned_learners,  max_assigned_learners,  is_followup_instructor,  active,  delete_at,  contract_type_id,  knowledge_area_id, person_id
+INSERT INTO `instructor` ( `id`, `contract_start_date`,  `contract_end_date`,  `assigned_learners`,  `max_assigned_learners`,  `is_followup_instructor`,  `active`,  `delete_at`,  `contract_type_id`,  `knowledge_area_id`, `person_id`
 ) VALUES
 (1, '2024-01-15', '2025-01-15', 0, 0, 0, 1, NULL, 2, 1, 2),
 (2, '2023-08-01', '2024-08-01', 5, 80, 1, 1, NULL, 1, 1, 3),
 (3, '2023-08-01', '2024-08-01', 0, 0, 0, 1, NULL, 1, 1, 4);
 
-INSERT INTO person_sede (id, active, delete_at, person_id, sede_id) VALUES
+INSERT INTO `person_sede` (`id`, `active`, `delete_at`, `person_id`, `sede_id`) VALUES
 	(1, 1, NULL, 1, 32),
   (2, 1, NULL, 2, 32),
   (3, 1, NULL, 3, 32),
   (4, 1, NULL, 4, 32);
 
 
-INSERT INTO security_user (id, password, last_login, is_superuser, registered, email, is_active, is_staff, deleted_at, created_at, updated_at, reset_code, reset_code_expiration, person_id, role_id) VALUES
-	(1, 'pbkdf2_sha256$600000$c27VSLoHl7gXHmV3Ii5pOK$FuYQpuI1rTwjdwCt3X9nYZiftEoIlOpQGkzT6+6cIEE=', NULL, 0, 0, 'july_ramos@soy.sena.edu.co', 1, 0, NULL, '2025-11-06 19:31:52.609196', '2025-11-06 19:32:53.972992', NULL, NULL, 1, 2),
+INSERT INTO `security_user` (`id`, `password`, `last_login`, `is_superuser`, `registered`, `email`, `is_active`, `is_staff`, `deleted_at`, `created_at`, `updated_at`, `reset_code`, `reset_code_expiration`, `person_id`, `role_id`) VALUES
+	(1, 'pbkdf2_sha256$600000$c27VSLoHl7gXHmV3Ii5pOK$FuYQpuI1rTwjdwCt3X9nYZiftEoIlOpQGkzT6+6cIEE=', NULL, 0, 0, 'daniela_ramos@soy.sena.edu.co', 1, 0, NULL, '2025-11-06 19:31:52.609196', '2025-11-06 19:32:53.972992', NULL, NULL, 1, 2),
   (2, 'pbkdf2_sha256$600000$c27VSLoHl7gXHmV3Ii5pOK$FuYQpuI1rTwjdwCt3X9nYZiftEoIlOpQGkzT6+6cIEE=', NULL, 0, 0, 'july@sena.edu.co', 1, 0, NULL, '2025-11-06 19:31:52.609196', '2025-11-06 19:32:53.972992', NULL, NULL, 2, 1),
   (3, 'pbkdf2_sha256$600000$c27VSLoHl7gXHmV3Ii5pOK$FuYQpuI1rTwjdwCt3X9nYZiftEoIlOpQGkzT6+6cIEE=', NULL, 0, 0, 'ramos@sena.edu.co', 1, 0, NULL, '2025-11-06 19:31:52.609196', '2025-11-06 19:32:53.972992', NULL, NULL, 3, 3),
   (4, 'pbkdf2_sha256$600000$c27VSLoHl7gXHmV3Ii5pOK$FuYQpuI1rTwjdwCt3X9nYZiftEoIlOpQGkzT6+6cIEE=', NULL, 0, 0, 'paola@sena.edu.co', 1, 0, NULL, '2025-11-06 19:31:52.609196', '2025-11-06 19:32:53.972992', NULL, NULL, 4, 5);
