@@ -45,7 +45,7 @@ class AprendizService(BaseService):
             with transaction.atomic():
                 # 1. Create person
                 person_data = {
-                    'type_identification': type_identification,
+                    'type_identification_id': type_identification,
                     'number_identification': numero_identificacion,
                     'first_name': first_name,
                     'second_name': second_name,
