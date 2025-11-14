@@ -46,7 +46,8 @@ class RoleFormPermissionService(BaseService):
         # Eliminar todos los permisos actuales de ese rol
         RoleFormPermission.objects.filter(role=role).delete()
         total_created = 0
-        for form_perm in data.get('formularios', []):
+        forms_list = data.get('forms') or data.get('formularios') or []
+        for form_perm in forms_list:
             form_id = form_perm.get('form_id')
             permission_ids = form_perm.get('permission_ids', [])
             form = Form.objects.get(pk=form_id)
