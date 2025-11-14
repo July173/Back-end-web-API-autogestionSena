@@ -123,8 +123,8 @@ class AprendizService(BaseService):
         user_data = {
             'email': validated_data['email'],
         }
-        ficha_id = validated_data['ficha_id']
-        role_id = validated_data['role_id']
+        ficha_id = validated_data.get('ficha_id', validated_data.get('ficha'))
+        role_id = validated_data.get('role_id', validated_data.get('role'))
 
         aprendiz = Apprentice.objects.get(pk=aprendiz_id)
         # Validación de correo institucional
