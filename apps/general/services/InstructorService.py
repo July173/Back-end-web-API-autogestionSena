@@ -120,9 +120,13 @@ class InstructorService(BaseService):
                 temp_suffix = get_random_string(length=2)
                 temp_password = identification_number + temp_suffix
                 user_data['password'] = temp_password
+
                 user = UserService().create(user_data)
                 if isinstance(user, dict) and user.get('status') == 'error':
                     raise Exception(user.get('message', 'No se pudo crear el usuario'))
+                # Asegurar que el campo registered quede en False
+                user.registered = False
+                user.save()
 
                 # 3. Create instructor
                 instructor_data['person'] = person
