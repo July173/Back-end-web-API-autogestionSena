@@ -1,3 +1,4 @@
+from apps.general.entity.models.PersonSede import PersonSede
 from apps.security.services.PersonService import PersonService
 from apps.security.services.UserService import UserService
 from apps.security.entity.models.DocumentType import DocumentType
@@ -11,6 +12,8 @@ from core.utils.Validation import is_unique_email, validate_document_number, val
 from core.utils.Validation import is_sena_email
 from django.contrib.auth.hashers import make_password
 from apps.security.emails.CreacionCuentaUsers import send_account_created_email
+from django.utils.crypto import get_random_string
+
 
 
 class InstructorService(BaseService):
@@ -85,12 +88,18 @@ class InstructorService(BaseService):
             except Exception:
                 return format_response('El área de conocimiento proporcionada no existe.', success=False, type='invalid_knowledge_area', status_code=400)
 
+
+            # Validar fechas de contrato
+            fecha_inicio = instructor_data.get('contract_start_date')
+            fecha_fin = instructor_data.get('contract_end_date')
+            if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
+                return format_response('La fecha de fin de contrato no puede ser anterior a la fecha de inicio.', success=False, type='invalid_contract_dates', status_code=400)
+
             # Validate TypeIdentification
             type_id = person_data.get('type_identification')
             if type_id and not isinstance(type_id, DocumentType):
                 person_data['type_identification'] = DocumentType.objects.get(pk=type_id)
-                
-            
+
             #Transactional handling of data creation
             with transaction.atomic():
                 # 1. Create person
@@ -99,7 +108,7 @@ class InstructorService(BaseService):
                     raise Exception(person.get('message', 'No se pudo crear la persona'))
 
                 user_data['person_id'] = person.id
-                
+
                 # 2. Create user
                 # Activate user automatically
                 user_data['is_active'] = True
@@ -107,7 +116,6 @@ class InstructorService(BaseService):
                 if 'role_id' not in user_data:
                     return format_response('El rol es obligatorio.', success=False, type='invalid_role', status_code=400)
                 # Hash the password using the identification number
-                from django.utils.crypto import get_random_string
                 identification_number = str(person_data.get('number_identification'))
                 temp_suffix = get_random_string(length=2)
                 temp_password = identification_number + temp_suffix
@@ -121,11 +129,14 @@ class InstructorService(BaseService):
                 instructor_data['contract_type'] = contract_type
                 instructor_data['knowledge_area'] = knowledge_area
                 instructor = Instructor.objects.create(**instructor_data)
-                
-                # 4. Send account creation email to instructor
+
+                # 4. Create PersonSede association
+                PersonSede.objects.create(person=person, sede=sede)
+
+                # 5. Send account creation email to instructor
                 full_name = f"{person.first_name} {person.first_last_name}"
                 send_account_created_email(user.email, full_name, temp_password)
-                # 4. Serialize response
+                # 6. Serialize response
                 return format_response(
                     "Instructor registrado correctamente.",
                     success=True,
