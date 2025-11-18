@@ -5,6 +5,16 @@ from apps.security.repositories.FormRepository import FormRepository
 class FormService(BaseService):
     def __init__(self):
         super().__init__(FormRepository())
+    
+    def get_filtered_forms(self, active=None):
+        from apps.security.entity.models import Form
+        queryset = Form.objects.all()
+        if active is not None:
+            if str(active).lower() in ['true', '1', 'yes']:
+                queryset = queryset.filter(active=True)
+            elif str(active).lower() in ['false', '0', 'no']:
+                queryset = queryset.filter(active=False)
+        return queryset
 
     def create_form(self, validated_data):
         from apps.security.entity.models import Form

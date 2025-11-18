@@ -9,7 +9,24 @@ from apps.security.services.FormService import FormService
 from apps.security.entity.serializers.FormSerializer import FormSerializer
 
 
+
 class FormViewSet(BaseViewSet):
+    @swagger_auto_schema(
+        operation_description="Filtra formularios por estado (activo/inactivo)",
+        tags=["Form"],
+        manual_parameters=[
+            openapi.Parameter('active', openapi.IN_QUERY, description="Estado del formulario (true/false)", type=openapi.TYPE_BOOLEAN)
+        ],
+        responses={200: openapi.Response("Lista de formularios filtrados")}
+    )
+    @action(detail=False, methods=['get'], url_path='filter')
+    def filter_forms(self, request):
+        active = request.query_params.get('active')
+        service = self.service_class()
+        queryset = service.get_filtered_forms(active)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     service_class = FormService
     serializer_class = FormSerializer
 
