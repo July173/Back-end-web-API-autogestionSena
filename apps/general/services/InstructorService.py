@@ -220,7 +220,7 @@ class InstructorService(BaseService):
                 from apps.general.entity.models import PersonSede
                 person_sede = PersonSede.objects.filter(person=person).first()
                 if person_sede:
-                    person_sede.SedeId = sede
+                    person_sede.sede = sede
                     person_sede.save()
 
                 return format_response(
