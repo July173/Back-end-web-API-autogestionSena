@@ -9,7 +9,9 @@ from apps.general.entity.serializers.Regional.RegionalSerializer import Regional
 from apps.general.entity.serializers.Regional.RegionalNestedSerializer import RegionalNestedSerializer
 
 
+
 class RegionalViewset(BaseViewSet):
+
     service_class = RegionalService
     serializer_class = RegionalSerializer
 
@@ -99,7 +101,7 @@ class RegionalViewset(BaseViewSet):
         )
         
         
-        
+    # ----------- WITH CENTERS BY ID (custom) -----------
     @swagger_auto_schema(
         operation_description="Obtiene una regional por id con sus centros anidados.",
         tags=["Regional"],
@@ -113,6 +115,7 @@ class RegionalViewset(BaseViewSet):
         serializer = RegionalNestedSerializer(regional)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+    # ----------- WITH CENTERS (custom) -----------
     @swagger_auto_schema(
         operation_description="Obtiene todas las regionales con sus centros anidados.",
         tags=["Regional"],
@@ -124,3 +127,21 @@ class RegionalViewset(BaseViewSet):
         serializer = RegionalNestedSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+    # ----------- FILTER REGIONALS (custom) -----------
+    @swagger_auto_schema(
+        operation_description="Filtra regionales por nombre y estado (activo/inactivo)",
+        tags=["Regional"],
+        manual_parameters=[
+            openapi.Parameter('active', openapi.IN_QUERY, description="Estado de la regional (true/false)", type=openapi.TYPE_BOOLEAN),
+            openapi.Parameter('search', openapi.IN_QUERY, description="Nombre de la regional", type=openapi.TYPE_STRING)
+        ],
+        responses={200: openapi.Response("Lista de regionales filtradas")}
+    )
+    @action(detail=False, methods=['get'], url_path='filter')
+    def filter_regionals(self, request):
+        active = request.query_params.get('active')
+        search = request.query_params.get('search')
+        service = self.service_class()
+        queryset = service.get_filtered_regionals(active, search)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

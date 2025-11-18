@@ -8,7 +8,9 @@ from apps.general.services.ProgramService import ProgramService
 from apps.general.entity.serializers.ProgramSerializer import ProgramSerializer
 from apps.general.entity.serializers.FichaSerializer import FichaSerializer
 
+
 class ProgramViewset(BaseViewSet):
+    
     service_class = ProgramService
     serializer_class = ProgramSerializer
 
@@ -133,3 +135,22 @@ class ProgramViewset(BaseViewSet):
                 {"error": str(e)}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    # ----------- FILTER PROGRAMS (custom) -----------
+    @swagger_auto_schema(
+        operation_description="Filtra programas por nombre y estado (activo/inactivo)",
+        tags=["Program"],
+        manual_parameters=[
+            openapi.Parameter('active', openapi.IN_QUERY, description="Estado del programa (true/false)", type=openapi.TYPE_BOOLEAN),
+            openapi.Parameter('search', openapi.IN_QUERY, description="Nombre del programa", type=openapi.TYPE_STRING)
+        ],
+        responses={200: openapi.Response("Lista de programas filtrados")}
+    )
+    @action(detail=False, methods=['get'], url_path='filter')
+    def filter_programs(self, request):
+        active = request.query_params.get('active')
+        search = request.query_params.get('search')
+        service = self.service_class()
+        queryset = service.get_filtered_programs(active, search)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
