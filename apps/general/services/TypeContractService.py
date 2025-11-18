@@ -3,6 +3,7 @@ from apps.general.repositories.TypeContractRepository import TypeContractReposit
 from apps.general.entity.models.TypeContract import TypeContract
 
 
+
 class TypeContractService(BaseService):
     def __init__(self):
         super().__init__(TypeContractRepository())
@@ -17,3 +18,16 @@ class TypeContractService(BaseService):
         if search:
             queryset = queryset.filter(name__icontains=search)
         return queryset
+
+    def create_type_contract(self, validated_data):
+        name = validated_data.get('name', '').strip()
+        if not name:
+            return None, "El nombre es requerido."
+        exists = TypeContract.objects.filter(name__iexact=name, delete_at__isnull=True).exists()
+        if exists:
+            return None, "Ya existe un tipo de contrato con ese nombre."
+        serializer = self.repository.get_serializer()(data=validated_data)
+        if serializer.is_valid():
+            instance = serializer.save()
+            return instance, None
+        return None, serializer.errors

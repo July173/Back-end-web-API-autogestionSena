@@ -28,7 +28,12 @@ class DocumentTypeViewset(BaseViewSet):
         tags=["DocumentType"]
     )
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        service = self.service_class()
+        instance, error = service.create_document_type(request.data)
+        if error:
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     # ----------- RETRIEVE -----------
     @swagger_auto_schema(

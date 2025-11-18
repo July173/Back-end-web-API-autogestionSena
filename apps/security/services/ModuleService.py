@@ -1,10 +1,12 @@
 from core.base.services.implements.baseService.BaseService import BaseService
 from apps.security.repositories.ModuleRepository import ModuleRepository
-
+from apps.security.entity.models import Module
 
 class ModuleService(BaseService):
+    def __init__(self):
+        super().__init__(ModuleRepository())
+        
     def create_module(self, validated_data):
-        from apps.security.entity.models import Module
         name = validated_data.get('name', '').strip()
         if not name:
             return None, "El nombre es requerido."
@@ -20,5 +22,4 @@ class ModuleService(BaseService):
     def get_filtered_modules(self, active=None, search=None):
         return self.repository.get_filtered_modules(active, search)
 
-    def __init__(self):
-        super().__init__(ModuleRepository())
+    

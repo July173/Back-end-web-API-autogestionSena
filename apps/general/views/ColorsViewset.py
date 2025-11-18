@@ -1,6 +1,7 @@
 from rest_framework.decorators import action
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework import status
 from core.base.view.implements.BaseViewset import BaseViewSet
 from apps.general.services.ColorsService import ColorsService
 from apps.general.entity.serializers.ColorsSerializer import ColorsSerializer
@@ -25,7 +26,12 @@ class ColorsViewset(BaseViewSet):
         tags=["Colors"]
     )
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        service = self.service_class()
+        instance, error = service.create_color(request.data)
+        if error:
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     # ----------- RETRIEVE -----------
     @swagger_auto_schema(

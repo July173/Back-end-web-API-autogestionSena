@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-
 from core.base.view.implements.BaseViewset import BaseViewSet
 from apps.general.services.FichaService import FichaService
 from apps.general.entity.serializers.FichaSerializer import FichaSerializer
@@ -29,7 +28,12 @@ class FichaViewset(BaseViewSet):
         tags=["Ficha"]
     )
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        service = self.service_class()
+        instance, error = service.create_ficha(request.data)
+        if error:
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     # ----------- RETRIEVE -----------
     @swagger_auto_schema(

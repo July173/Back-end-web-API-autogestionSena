@@ -32,7 +32,12 @@ class ProgramViewset(BaseViewSet):
         tags=["Program"]
     )
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        service = self.service_class()
+        instance, error = service.create_program(request.data)
+        if instance:
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
 
     # ----------- RETRIEVE -----------
     @swagger_auto_schema(
