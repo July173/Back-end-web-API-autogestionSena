@@ -4,4 +4,20 @@ from apps.security.repositories.FormRepository import FormRepository
 
 class FormService(BaseService):
     def __init__(self):
-        self.repository = FormRepository()
+        super().__init__(FormRepository())
+
+    def create_form(self, validated_data):
+        from apps.security.entity.models import Form
+        name = validated_data.get('name', '').strip()
+        if not name:
+            return None, "El nombre es requerido."
+        exists = Form.objects.filter(name__iexact=name, delete_at__isnull=True).exists()
+        if exists:
+            return None, "Ya existe un formulario con ese nombre."
+        serializer = self.repository.get_serializer()(data=validated_data)
+        if serializer.is_valid():
+            instance = serializer.save()
+            return instance, None
+        return None, serializer.errors
+
+    
