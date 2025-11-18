@@ -6,9 +6,10 @@ from drf_yasg import openapi
 from core.base.view.implements.BaseViewset import BaseViewSet
 from apps.general.services.TypeOfQueriesService import TypeOfQueriesService
 from apps.general.entity.serializers.TypeOfQueriesSerializer import TypeOfQueriesSerializer
-from apps.general.entity.models.TypeOfQueries import TypeOfQueries
+
 
 class TypeOfQueriesViewset(BaseViewSet):
+
     service_class = TypeOfQueriesService
     serializer_class = TypeOfQueriesSerializer
 
@@ -72,3 +73,23 @@ class TypeOfQueriesViewset(BaseViewSet):
             return Response({"detail": "No encontrado."}, status=status.HTTP_404_NOT_FOUND)
         self.service.soft_delete(pk)
         return Response({"detail": "Eliminado lógicamente correctamente."}, status=status.HTTP_200_OK)
+
+
+    #----------- FILTER TYPE OF QUERIES -----------
+    @swagger_auto_schema(
+        operation_description="Filtra tipos de consulta por nombre y estado (activo/inactivo)",
+        tags=["TypeOfQueries"],
+        manual_parameters=[
+            openapi.Parameter('active', openapi.IN_QUERY, description="Estado del tipo de consulta (true/false)", type=openapi.TYPE_BOOLEAN),
+            openapi.Parameter('search', openapi.IN_QUERY, description="Nombre del tipo de consulta", type=openapi.TYPE_STRING)
+        ],
+        responses={200: openapi.Response("Lista de tipos de consulta filtrados")}
+    )
+    @action(detail=False, methods=['get'], url_path='filter')
+    def filter_type_of_queries(self, request):
+        active = request.query_params.get('active')
+        search = request.query_params.get('search')
+        service = self.service_class()
+        queryset = service.get_filtered_type_of_queries(active, search)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

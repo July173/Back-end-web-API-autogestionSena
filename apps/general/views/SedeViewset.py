@@ -8,7 +8,9 @@ from apps.general.services.SedeService import SedeService
 from apps.general.entity.serializers.SedeSerializer import SedeSerializer
 
 
+
 class SedeViewset(BaseViewSet):
+    
     service_class = SedeService
     serializer_class = SedeSerializer
 
@@ -96,3 +98,22 @@ class SedeViewset(BaseViewSet):
             {"detail": "No encontrado."},
             status=status.HTTP_404_NOT_FOUND
         )
+
+    # ----------- FILTER (custom) -----------
+    @swagger_auto_schema(
+        operation_description="Filtra sedes por nombre y estado (activo/inactivo)",
+        tags=["Sede"],
+        manual_parameters=[
+            openapi.Parameter('active', openapi.IN_QUERY, description="Estado de la sede (true/false)", type=openapi.TYPE_BOOLEAN),
+            openapi.Parameter('search', openapi.IN_QUERY, description="Nombre de la sede", type=openapi.TYPE_STRING)
+        ],
+        responses={200: openapi.Response("Lista de sedes filtradas")}
+    )
+    @action(detail=False, methods=['get'], url_path='filter')
+    def filter_sedes(self, request):
+        active = request.query_params.get('active')
+        search = request.query_params.get('search')
+        service = self.service_class()
+        queryset = service.get_filtered_sedes(active, search)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
