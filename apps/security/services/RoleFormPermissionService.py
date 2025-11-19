@@ -47,7 +47,7 @@ class RoleFormPermissionService(BaseService):
         RoleFormPermission.objects.filter(role=role).delete()
         total_created = 0
         forms_list = data.get('forms') or data.get('formularios') or []
-        for form_perm in forms_list:
+        for form_perm in -forms_list:
             form_id = form_perm.get('form_id')
             permission_ids = form_perm.get('permission_ids', [])
             form = Form.objects.get(pk=form_id)
@@ -62,8 +62,14 @@ class RoleFormPermissionService(BaseService):
 
 
     def create_role_with_permissions(self, data):
+        type_role = data['type_role'].strip()
+        if not type_role:
+            return None, "El nombre del rol es requerido."
+        # Validar unicidad (no repetir nombre de rol activo)
+        if Role.objects.filter(type_role__iexact=type_role, active=True).exists():
+            return None, "Ya existe un rol con ese nombre."
         role = Role.objects.create(
-            type_role=data['type_role'],
+            type_role=type_role,
             description=data.get('description', ''),
             active=data.get('active', True)
         )
@@ -79,7 +85,7 @@ class RoleFormPermissionService(BaseService):
         return {
             'role_id': role.id,
             'created_permissions': total_created
-        }
+        }, None
     
 
     def get_menu(self, user_id: int):
