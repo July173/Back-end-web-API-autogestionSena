@@ -154,10 +154,10 @@ class RequestAsignationService(BaseService):
 
     def create_form_request(self, validated_data):
         try:
-            logger.info(f"Iniciando creación de solicitud para aprendiz ID: {validated_data.get('aprendiz_id')}")
-            aprendiz = Apprentice.objects.get(pk=validated_data['aprendiz_id'])
-            ficha = Ficha.objects.get(pk=validated_data['ficha_id'])
-            last_request = RequestAsignation.objects.filter(aprendiz=aprendiz).order_by('-id').first()
+            logger.info(f"Iniciando creación de solicitud para aprendiz ID: {validated_data.get('apprentice')}")
+            apprentice = Apprentice.objects.get(pk=validated_data['apprentice'])
+            ficha = Ficha.objects.get(pk=validated_data['ficha'])
+            last_request = RequestAsignation.objects.filter(apprentice=apprentice).order_by('-id').first()
             if last_request and last_request.request_state != RequestState.RECHAZADO:
                 return self.error_response("Solo puedes volver a enviar el formulario si tu última solicitud fue rechazada.", "invalid_state")
             sede = Sede.objects.get(pk=validated_data['sede'])
@@ -171,20 +171,20 @@ class RequestAsignationService(BaseService):
                     return self.error_response("La diferencia entre la fecha de inicio y fin de contrato debe ser de al menos 6 meses.", "invalid_dates")
             logger.info("Validaciones completadas exitosamente")
             with transaction.atomic():
-                aprendiz, ficha, enterprise, boss, human_talent, sede, modality, request_asignation = self.repository.create_all_dates_form_request(validated_data)
-                person = aprendiz.person
+                apprentice_obj, ficha_obj, enterprise, boss, human_talent, sede, modality, request_asignation = self.repository.create_all_dates_form_request(validated_data)
+                person = apprentice_obj.person
                 PersonSede.objects.update_or_create(
-                    PersonId=person,
-                    defaults={"SedeId": sede}
+                    person=person,
+                    defaults={"sede": sede}
                 )
                 response = {
                     'success': True,
                     'message': 'Solicitud creada exitosamente',
                     'data': {
                         'aprendiz': {
-                            'id': aprendiz.id,
-                            'ficha_id': ficha.id,
-                            'active': aprendiz.active
+                            'id': apprentice_obj.id,
+                            'ficha_id': ficha_obj.id,
+                            'active': apprentice_obj.active
                         },
                         'enterprise': {
                             'id': enterprise.id,

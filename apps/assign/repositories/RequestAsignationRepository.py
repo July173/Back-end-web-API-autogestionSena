@@ -95,28 +95,17 @@ class RequestAsignationRepository(BaseRepository):
             modality = ModalityProductiveStage.objects.get(pk=data['modality_productive_stage'])
             
             # Buscar aprendiz existente
-            aprendiz = Apprentice.objects.get(pk=data['aprendiz_id'])
-            
+            aprendiz = Apprentice.objects.get(pk=data['apprentice'])
+
             # Buscar ficha y vincularla al aprendiz
-            ficha = Ficha.objects.get(pk=data['ficha_id'])
+            ficha = Ficha.objects.get(pk=data['ficha'])
             aprendiz.ficha = ficha
             aprendiz.save()
             
             # CREACIÓN DE ENTIDADES (solo operaciones BD)
             
-            # 3. Crear Enterprise
-            enterprise_data = {
-                'name_enterprise': data['enterprise_name'],
-                'nit_enterprise': data['enterprise_nit'],
-                'locate': data['enterprise_location'],
-                'email_enterprise': data['enterprise_email'],
-            }
-            enterprise = Enterprise.objects.create(**enterprise_data)
-            logger.info(f"Empresa creada con ID: {enterprise.id}")
-            
-            # 4. Crear Boss
+            # 3. Crear Boss primero
             boss_data = {
-                'enterprise': enterprise,
                 'name_boss': data['boss_name'],
                 'phone_number': data['boss_phone'],
                 'email_boss': data['boss_email'],
@@ -124,7 +113,18 @@ class RequestAsignationRepository(BaseRepository):
             }
             boss = Boss.objects.create(**boss_data)
             logger.info(f"Jefe creado con ID: {boss.id}")
-            
+
+            # 4. Crear Enterprise con el boss asignado
+            enterprise_data = {
+                'boss': boss,
+                'name_enterprise': data['enterprise_name'],
+                'nit_enterprise': data['enterprise_nit'],
+                'locate': data['enterprise_location'],
+                'email_enterprise': data['enterprise_email'],
+            }
+            enterprise = Enterprise.objects.create(**enterprise_data)
+            logger.info(f"Empresa creada con ID: {enterprise.id}")
+
             # 5. Crear HumanTalent
             human_talent_data = {
                 'enterprise': enterprise,
@@ -137,14 +137,14 @@ class RequestAsignationRepository(BaseRepository):
             
             # 6. Crear RequestAsignation con PDF
             request_asignation_data = {
-                'aprendiz': aprendiz,
+                'apprentice': aprendiz,
                 'enterprise': enterprise,
                 'modality_productive_stage': modality,
                 'request_date': data['fecha_inicio_contrato'],  # Usar fecha de inicio como fecha de solicitud
                 'date_start_production_stage': data['fecha_inicio_contrato'],
                 'date_end_production_stage': data['fecha_fin_contrato'],
                 'pdf_request': data.get('pdf_request'),  # El archivo PDF
-                 'request_state': RequestState.SIN_ASIGNAR,  # Estado inicial correcto del enum
+                'request_state': RequestState.SIN_ASIGNAR,  # Estado inicial correcto del enum
             }
             request_asignation = RequestAsignation.objects.create(**request_asignation_data)
             logger.info(f"RequestAsignation creado con ID: {request_asignation.id}, PDF: {request_asignation.pdf_request}")
@@ -202,6 +202,10 @@ class RequestAsignationRepository(BaseRepository):
         logger.info(f"Se encontraron {len(form_requests)} solicitudes")
         return form_requests
     
-
     
+    
+    
+
+
+
 
