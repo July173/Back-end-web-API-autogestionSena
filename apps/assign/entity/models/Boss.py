@@ -1,11 +1,9 @@
 from django.db import models
 
 class Boss(models.Model):
-    
-    class Metta:
+    class Meta:
         db_table = 'boss'
-    
-    enterprise = models.OneToOneField('assign.Enterprise', on_delete=models.CASCADE, related_name='boss')
+
     name_boss = models.CharField(max_length=100)
     phone_number = models.BigIntegerField()
     email_boss = models.EmailField(max_length=100)

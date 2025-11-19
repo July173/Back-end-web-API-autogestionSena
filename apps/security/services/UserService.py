@@ -1,4 +1,4 @@
-from apps.general import models
+from django.db.models import Q
 from core.base.services.implements.baseService.BaseService import BaseService
 from apps.security.repositories.UserRepository import UserRepository
 from django.contrib.auth.hashers import make_password
@@ -16,6 +16,7 @@ from core.utils.Validation import is_soy_sena_email, is_sena_email
 from django.utils.crypto import get_random_string
 from apps.security.emails.SendEmailsActivate import enviar_activacion_usuario
 from apps.security.emails.SendEmails2FA import enviar_codigo_verificacion_2fa
+
 
 
 class UserService(BaseService):
@@ -211,11 +212,11 @@ class UserService(BaseService):
             queryset = queryset.filter(role__type_role__icontains=role)
         if search:
             queryset = queryset.filter(
-                models.Q(person__first_name__icontains=search) |
-                models.Q(person__second_name__icontains=search) |
-                models.Q(person__first_last_name__icontains=search) |
-                models.Q(person__second_last_name__icontains=search) |
-                models.Q(person__number_identification__icontains=search)
+                Q(person__first_name__icontains=search) |
+                Q(person__second_name__icontains=search) |
+                Q(person__first_last_name__icontains=search) |
+                Q(person__second_last_name__icontains=search) |
+                Q(person__number_identification__icontains=search)
             )
         return list(queryset)
 

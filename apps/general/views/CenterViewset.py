@@ -9,7 +9,9 @@ from apps.general.entity.serializers.CenterSerializer import CenterSerializer
 from apps.general.entity.serializers.CenterSerializer import CenterSerializer
 
 
+
 class CenterViewset(BaseViewSet):
+
     service_class = CenterService
     serializer_class = CenterSerializer
 
@@ -27,7 +29,12 @@ class CenterViewset(BaseViewSet):
         tags=["Center"]
     )
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        service = self.service_class()
+        instance, error = service.create_center(request.data)
+        if instance:
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
 
     # ----------- RETRIEVE -----------
     @swagger_auto_schema(
@@ -111,4 +118,23 @@ class CenterViewset(BaseViewSet):
     def with_sedes(self, request):
         queryset = self.service_class().get_all_centers_with_sedes()
         serializer = CenterSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    #----------- FILTER CENTERS -----------
+    @swagger_auto_schema(
+        operation_description="Filtra centros por nombre y estado (activo/inactivo)",
+        tags=["Center"],
+        manual_parameters=[
+            openapi.Parameter('active', openapi.IN_QUERY, description="Estado del centro (true/false)", type=openapi.TYPE_BOOLEAN),
+            openapi.Parameter('search', openapi.IN_QUERY, description="Nombre del centro", type=openapi.TYPE_STRING)
+        ],
+        responses={200: openapi.Response("Lista de centros filtrados")}
+    )
+    @action(detail=False, methods=['get'], url_path='filter')
+    def filter_centers(self, request):
+        active = request.query_params.get('active')
+        search = request.query_params.get('search')
+        service = self.service_class()
+        queryset = service.get_filtered_centers(active, search)
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

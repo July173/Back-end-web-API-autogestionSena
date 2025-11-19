@@ -139,8 +139,12 @@ INSERT INTO `ficha` (`id`, `file_number`, `type_modality`, `active`, `delete_at`
   (2, 2901885, 'Virtual', 1, NULL, 2);
 
 INSERT INTO `modality_productive_stage` (`id`, `name_modality`, `description`, `active`, `delete_at`) VALUES
-  (1, 'Contrato de aprendizaje', 'El aprendiz desarrolla su etapa práctica con contrato de aprendizaje', 1, NULL);
-
+  (1, 'Contrato de aprendizaje', 'El aprendiz desarrolla su etapa práctica con contrato de aprendizaje', 1, NULL),
+  (2, 'Vínculo Laboral', 'El aprendiz desarrolla su etapa práctica con vinculo laboral', 1, NULL),
+  (3, 'Vínculo Formativo', 'El aprendiz desarrolla su etapa práctica con vinculo formativo', 1, NULL),
+  (4, 'Proyecto Productivo', 'El aprendiz desarrolla su etapa práctica con proyecto productivo', 1, NULL),
+  (5, 'Unidad Productiva Familiar', 'El aprendiz desarrolla su etapa práctica con unidad productiva familiar', 1, NULL),
+  (6, 'Monitoria', 'El aprendiz desarrolla su etapa práctica con monitoria', 1, NULL);
 
 INSERT INTO `legal_document` (`id`, `type`, `title`, `effective_date`, `last_update`, `active`, `delete_at`) VALUES
   (1, 'terms', 'Términos y condiciones', '2025-10-01', '2025-10-01', 1, NULL);

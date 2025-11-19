@@ -19,8 +19,8 @@ class RequestAsignation(models.Model):
         'assign.ModalityProductiveStage', on_delete=models.CASCADE, related_name='requests'
     )
     request_date = models.DateField()
-    date_start_production_stage = models.DateField()
-    date_end_production_stage = models.DateField()
+    date_start_production_stage = models.DateField(null=True, blank=True)
+    date_end_production_stage = models.DateField(null=True, blank=True)
     pdf_request = models.FileField(upload_to='requests/', null=True, blank=True)
     request_state = models.CharField(
         max_length=50,

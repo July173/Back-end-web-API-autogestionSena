@@ -3,13 +3,14 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-
 from core.base.view.implements.BaseViewset import BaseViewSet
 from apps.general.services.FichaService import FichaService
 from apps.general.entity.serializers.FichaSerializer import FichaSerializer
 
 
+
 class FichaViewset(BaseViewSet):
+    
     service_class = FichaService
     serializer_class = FichaSerializer
 
@@ -27,7 +28,12 @@ class FichaViewset(BaseViewSet):
         tags=["Ficha"]
     )
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        service = self.service_class()
+        instance, error = service.create_ficha(request.data)
+        if error:
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     # ----------- RETRIEVE -----------
     @swagger_auto_schema(
@@ -83,3 +89,22 @@ class FichaViewset(BaseViewSet):
             {"detail": "No encontrado."},
             status=status.HTTP_404_NOT_FOUND
         )
+
+    # ----------- FILTER (custom) -----------
+    @swagger_auto_schema(
+        operation_description="Filtra fichas por número de ficha y estado (activo/inactivo)",
+        tags=["Ficha"],
+        manual_parameters=[
+            openapi.Parameter('active', openapi.IN_QUERY, description="Estado de la ficha (true/false)", type=openapi.TYPE_BOOLEAN),
+            openapi.Parameter('search', openapi.IN_QUERY, description="Número de ficha", type=openapi.TYPE_STRING)
+        ],
+        responses={200: openapi.Response("Lista de fichas filtradas")}
+    )
+    @action(detail=False, methods=['get'], url_path='filter')
+    def filter_fichas(self, request):
+        active = request.query_params.get('active')
+        search = request.query_params.get('search')
+        service = self.service_class()
+        queryset = service.get_filtered_fichas(active, search)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
