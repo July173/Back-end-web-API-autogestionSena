@@ -79,7 +79,9 @@ class RoleFormPermissionViewSet(BaseViewSet):
     def create_role_with_permissions(self, request):
         serializer = CreateRoleWithPermissionsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        result = self.service.create_role_with_permissions(serializer.validated_data)
+        result, error = self.service.create_role_with_permissions(serializer.validated_data)
+        if error:
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(result, status=status.HTTP_201_CREATED)
     
     
