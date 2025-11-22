@@ -20,3 +20,14 @@ class MessageRepository:
             content=content,
             type_message=type_message
         )
+        
+    def update_request_state(self, message_id, request_state):
+        """Actualiza solo el estado de la solicitud asociada a un mensaje."""
+        from apps.assign.entity.models import Message
+        try:
+            message = Message.objects.get(pk=message_id)
+            message.request_asignation.request_state = request_state
+            message.request_asignation.save()
+            return message
+        except Message.DoesNotExist:
+            return None

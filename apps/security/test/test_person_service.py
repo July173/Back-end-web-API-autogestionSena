@@ -2,28 +2,38 @@ from django.test import TestCase
 from unittest.mock import patch, MagicMock
 from apps.security.services.PersonService import PersonService
 import time
+from apps.security.entity.models.DocumentType import DocumentType
+
 
 class RegisterApprenticeTest(TestCase):
     
-    # Test para registro exitoso de aprendiz
-    @patch('apps.security.services.PersonService.format_response')
+    # Test para registro exitoso de aprendiz (solo pasa con correo válido)
     @patch('apps.general.services.AprendizService.AprendizService')
-    @patch('apps.security.emails.SendEmails.enviar_registro_pendiente')
-    @patch('apps.security.entity.serializers.person.PersonSerializer')
-    @patch('apps.security.services.UserService.UserService')
-    @patch('core.utils.Validation.validate_phone_number', return_value=(True, ''))
-    @patch('core.utils.Validation.validate_document_number', return_value=(True, ''))
-    @patch('core.utils.Validation.is_unique_email', return_value=True)
-    @patch('core.utils.Validation.is_soy_sena_email', return_value=True)
+    @patch('apps.security.services.PersonService.enviar_registro_pendiente')
+    @patch('apps.security.services.PersonService.PersonSerializer')
+    @patch('apps.security.services.PersonService.UserService')
+    @patch('apps.security.services.PersonService.validate_phone_number')
+    @patch('apps.security.services.PersonService.validate_document_number')
+    @patch('apps.security.services.PersonService.is_unique_email')
+    @patch('apps.security.services.PersonService.is_soy_sena_email')
     def test_register_apprentice_success(
         self, mock_soy_sena_email, mock_unique_email, mock_validate_doc, mock_validate_phone,
-        mock_user_service, mock_person_serializer, mock_enviar_email, mock_aprendiz_service, mock_format_response
+        mock_user_service, mock_person_serializer, mock_enviar_email, mock_aprendiz_service
     ):
+        # Crear tipo de identificación requerido en la base de datos de pruebas
+        doc_type = DocumentType.objects.create(id=1, name='Cédula de Ciudadanía', acronyms='CC', active=True)
+
+        # Configura los mocks para validar según el dato de entrada
+        mock_soy_sena_email.side_effect = lambda email: email.endswith('@soy.sena.edu.co')
+        mock_validate_doc.side_effect = lambda doc, model=None: (str(doc).isdigit() and len(str(doc)) >= 6, '')
+        mock_validate_phone.side_effect = lambda phone: (str(phone).isdigit() and len(str(phone)) == 10, '')
+        mock_unique_email.side_effect = lambda email, model=None: email != 'repetido@soy.sena.edu.co'
         start = time.time()
         data = {
-            'email': 'test@soy.sena.edu.co',
-            'number_identification': '123456',
-            'phone_number': '3001234567',
+            'email': 'test@soy.sena.edu.co',      # Correo válido (dominio institucional)
+            'number_identification': 12345678,    # Documento válido (entero)
+            'phone_number': 3001234567,           # Teléfono válido (entero)
+            'type_identification': doc_type.id,   # Tipo de documento válido
             'first_name': 'Juan',
             'first_last_name': 'Pérez'
         }
@@ -38,57 +48,48 @@ class RegisterApprenticeTest(TestCase):
 
         # Mock UserService
         user_instance = MagicMock()
+        user_instance.id = 1
+        user_instance.email = data['email']
+        user_instance.person = person_instance
         mock_user_service.return_value.create.return_value = user_instance
 
         # Mock AprendizService
         aprendiz_instance = MagicMock()
         mock_aprendiz_service.return_value.create.return_value = aprendiz_instance
 
-        # Mock format_response para simular respuesta exitosa
-        mock_format_response.return_value = {
-            'success': True,
-            'status_code': 201,
-            'type': 'register_apprentice',
-            'message': 'Usuario registrado correctamente. Tu cuenta está pendiente de activación por un administrador.'
-        }
 
         service = PersonService()
         response = service.register_apprentice(data)
-
-        self.assertTrue(response['success'])
+        print("RESPUESTA DEL SERVICIO:", response)
+        # El servicio usa format_response y devuelve claves: 'detail','type','status','status_code'
+        self.assertEqual(response['status'], 'success')
         self.assertEqual(response['status_code'], 201)
         self.assertEqual(response['type'], 'register_apprentice')
-        self.assertIn('Usuario registrado correctamente', response['message'])
+        self.assertIn('Usuario registrado correctamente', response['detail'])
         end = time.time()
         print(f"Tiempo de ejecución test_register_apprentice_success: {end - start:.4f} segundos")
 
     # Test para registro con email inválido
-    @patch('apps.security.services.PersonService.format_response')
-    @patch('core.utils.Validation.is_soy_sena_email', return_value=False)
-    def test_register_apprentice_invalid_email(self, mock_soy_sena_email, mock_format_response):
+    def test_register_apprentice_invalid_email(self):
         start = time.time()
+        # Crear tipo de identificación para que el flujo no dependa de su existencia
+        doc_type = DocumentType.objects.create(id=1, name='Cédula de Ciudadanía', acronyms='CC', active=True)
         data = {
-            'email': 'test@gmail.com',
-            'number_identification': '123456',
-            'phone_number': '3001234567',
+            'email': 'test@soy.sena.edu.co',
+            'number_identification': 12345678,
+            'phone_number': 3001234567,
+            'type_identification': doc_type.id,
             'first_name': 'Juan',
             'first_last_name': 'Pérez'
         }
-        # Mock format_response para simular respuesta de email inválido
-        mock_format_response.return_value = {
-            'success': False,
-            'status_code': 400,
-            'type': 'invalid_email',
-            'message': 'Solo se permiten correos institucionales (@soy.sena.edu.co)'
-        }
-        
         service = PersonService()
         response = service.register_apprentice(data)
-        
-        self.assertFalse(response['success'])
+
+        # Esperamos que la validación real detecte el correo inválido
+        self.assertEqual(response['status'], 'error')
         self.assertEqual(response['status_code'], 400)
         self.assertEqual(response['type'], 'invalid_email')
-        self.assertIn('Solo se permiten correos institucionales', response['message'])
+        self.assertIn('Solo se permiten correos institucionales', response['detail'])
         end = time.time()
         print(f"Tiempo de ejecución test_register_apprentice_invalid_email: {end - start:.4f} segundos")
 

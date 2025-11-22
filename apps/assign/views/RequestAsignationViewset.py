@@ -26,23 +26,8 @@ class RequestAsignationViewset(BaseViewSet):
             return FormRequestSerializer(*args, **kwargs)
         return self.serializer_class(*args, **kwargs)
     
-    @swagger_auto_schema(
-        operation_description="Obtiene la información detallada de una solicitud de formulario por su ID.",
-        tags=["FormRequest"],
-        responses={
-            200: openapi.Response("Solicitud encontrada con todos los datos detallados."),
-            404: openapi.Response("Error: {'success': False, 'error_type': 'not_found', 'message': 'Solicitud no encontrada', 'data': None}")
-        }
-    )
-    @action(detail=True, methods=['get'], url_path='form-request-detail')
-    def form_request_detail(self, request, pk=None):
-        result = self.service_class().get_form_request_by_id(pk)
-        if result['success']:
-            return Response(result, status=status.HTTP_200_OK)
-        else:
-            return Response(result, status=status.HTTP_404_NOT_FOUND)
-
     
+    #--- List -------
     @swagger_auto_schema(
         operation_description="Obtiene una lista de todas las solicitudes de asignación.",
         tags=["RequestAsignation"]
@@ -50,6 +35,7 @@ class RequestAsignationViewset(BaseViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
+    #--- Create -------
     @swagger_auto_schema(
         operation_description="Crea una nueva solicitud de asignación.",
         tags=["RequestAsignation"]
@@ -57,6 +43,7 @@ class RequestAsignationViewset(BaseViewSet):
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
 
+    #--- Retrieve -------
     @swagger_auto_schema(
         operation_description="Obtiene la información de una solicitud específica.",
         tags=["RequestAsignation"]
@@ -64,6 +51,7 @@ class RequestAsignationViewset(BaseViewSet):
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
 
+    #--- Update -------
     @swagger_auto_schema(
         operation_description="Actualiza la información completa de una solicitud.",
         tags=["RequestAsignation"]
@@ -71,6 +59,7 @@ class RequestAsignationViewset(BaseViewSet):
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
 
+    #--- Partial Update -------
     @swagger_auto_schema(
         operation_description="Actualiza solo algunos campos de una solicitud.",
         tags=["RequestAsignation"]
@@ -78,6 +67,7 @@ class RequestAsignationViewset(BaseViewSet):
     def partial_update(self, request, *args, **kwargs):
         return super().partial_update(request, *args, **kwargs)
 
+    #--- Destroy -------
     @swagger_auto_schema(
         operation_description="Elimina físicamente una solicitud de la base de datos.",
         tags=["RequestAsignation"]
@@ -85,6 +75,7 @@ class RequestAsignationViewset(BaseViewSet):
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
 
+    #--- Soft Destroy -------
     @swagger_auto_schema(
         method='delete',
         operation_description="Realiza un borrado lógico (soft delete) de la solicitud especificada.",
@@ -106,11 +97,8 @@ class RequestAsignationViewset(BaseViewSet):
             {"detail": "No encontrado."},
             status=status.HTTP_404_NOT_FOUND
         )
-
-
-    
    
-
+    #--- Create Form Request -------
     @swagger_auto_schema(
         operation_description="Crear una nueva solicitud de formulario (sin PDF)",
         tags=["FormRequest"],
@@ -132,25 +120,19 @@ class RequestAsignationViewset(BaseViewSet):
         result = self.service_class().create_form_request(serializer.validated_data)
         if result['success']:
             request_id = result['data']['request_asignation']['id'] if result['data'] and 'request_asignation' in result['data'] else None
-            return Response({"id": request_id}, status=status.HTTP_201_CREATED)
+            return Response({
+                "message": "Solicitud creada exitosamente",
+                "id": request_id
+            }, status=status.HTTP_201_CREATED)
         else:
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
 
+    #--- List Form Requests -------
     @swagger_auto_schema(
         operation_description="Obtener lista de todas las solicitudes de formulario",
-        tags=["FormRequest"],
+        tags=["FormRequest"],   
         responses={
-            200: openapi.Response(
-                description="Lista obtenida exitosamente",
-                examples={
-                    "application/json": {
-                        "success": True,
-                        "message": "Se encontraron 5 solicitudes",
-                        "count": 5,
-                        "data": []
-                    }
-                }
-            ),
+            200: openapi.Response(description="Lista obtenida exitosamente"),
             500: openapi.Response("Error: {'success': False, 'error_type': 'list_form_requests', 'message': 'Error al obtener las solicitudes', 'data': None}")
         }
     )
@@ -162,7 +144,7 @@ class RequestAsignationViewset(BaseViewSet):
         else:
             return Response(result, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
+    #--- Get PDF URL -------
     @swagger_auto_schema(
         operation_description="Obtiene la URL del PDF de la solicitud.",
         tags=["FormRequest PDF"],
@@ -179,7 +161,7 @@ class RequestAsignationViewset(BaseViewSet):
         else:
             return Response(result, status=status.HTTP_404_NOT_FOUND)
         
-        
+    #--- Reject Form Request -------
     @swagger_auto_schema(
         method='patch',
         operation_description="Rechaza una solicitud de formulario, cambiando el estado y guardando el mensaje de rechazo.",
@@ -210,6 +192,8 @@ class RequestAsignationViewset(BaseViewSet):
         else:
             return Response(result, status=status.HTTP_404_NOT_FOUND)
     
+    
+    #--- Aprendiz Dashboard -------
     @swagger_auto_schema(
         operation_description="Obtiene información del dashboard del aprendiz autenticado (solicitud activa, instructor asignado, estado).",
         tags=["RequestAsignation"],
@@ -242,6 +226,8 @@ class RequestAsignationViewset(BaseViewSet):
         else:
             return Response(result, status=status.HTTP_404_NOT_FOUND)
     
+    
+    #--- Filter Form Requests -------
     @swagger_auto_schema(
         operation_description="Filtra solicitudes de formulario por búsqueda, estado o programa",
         manual_parameters=[
@@ -259,3 +245,21 @@ class RequestAsignationViewset(BaseViewSet):
 
         result = self.service_class().filter_form_requests(search, request_state, program_id)
         return Response(result, status=status.HTTP_200_OK if result['success'] else status.HTTP_400_BAD_REQUEST)
+
+
+    #--- Form Request Detail -------
+    @swagger_auto_schema(
+        operation_description="Obtiene la información detallada de una solicitud de formulario por su ID.",
+        tags=["FormRequest"],
+        responses={
+            200: openapi.Response("Solicitud encontrada con todos los datos detallados."),
+            404: openapi.Response("Error: {'success': False, 'error_type': 'not_found', 'message': 'Solicitud no encontrada', 'data': None}")
+        }
+    )
+    @action(detail=True, methods=['get'], url_path='form-request-detail')
+    def form_request_detail(self, request, pk=None):
+        result = self.service_class().get_form_request_by_id(pk)
+        if result['success']:
+            return Response(result, status=status.HTTP_200_OK)
+        else:
+            return Response(result, status=status.HTTP_404_NOT_FOUND)

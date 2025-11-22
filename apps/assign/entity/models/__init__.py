@@ -5,6 +5,7 @@ from .HumanTalent import HumanTalent
 from .ModalityProductiveStage import ModalityProductiveStage
 from .RequestAsignation import RequestAsignation
 from .VisitFollowing import VisitFollowing
+from .Message import Message
 
 __all__ = [
     'AsignationInstructor',
@@ -13,5 +14,6 @@ __all__ = [
     'HumanTalent',
     'ModalityProductiveStage',
     'RequestAsignation',
-    'VisitFollowing'
+    'VisitFollowing',
+    'Message'
 ]

@@ -44,8 +44,8 @@ class RequestAsignationService(BaseService):
             request.request_state = RequestState.RECHAZADO
             request.rejectionMessage = rejection_message
             request.save()
-            aprendiz = request.aprendiz
-            person = aprendiz.person
+            apprentice = request.apprentice
+            person = apprentice.person
             nombre_aprendiz = f"{person.first_name} {person.first_last_name}"
             user = User.objects.filter(person=person).first()
             email = user.email if user else None
@@ -98,8 +98,8 @@ class RequestAsignationService(BaseService):
             user = User.objects.filter(person=person).first()
             correo_aprendiz = user.email if user else None
             # Obtener sede, centro y regional desde PersonSede
-            personsede = PersonSede.objects.filter(PersonId=person).first()
-            sede_obj = personsede.SedeId if personsede else sede
+            personsede = PersonSede.objects.filter(person=person).first()
+            sede_obj = personsede.sede if personsede else sede
             center_obj = sede_obj.center if sede_obj and hasattr(sede_obj, 'center') else center
             regional_obj = center_obj.regional if center_obj and hasattr(center_obj, 'regional') else regional
             # Datos de talento humano
@@ -244,7 +244,8 @@ class RequestAsignationService(BaseService):
                     'tipo_identificacion': getattr(person, 'type_identification_id', None),
                     'numero_identificacion': getattr(person, 'number_identification', None),
                     'fecha_solicitud': request_asignation.request_date,
-                    'request_state': request_asignation.request_state
+                    'request_state': request_asignation.request_state,
+                    'nombre_modalidad': getattr(modality, 'name_modality', None) if modality else None
                 }
                 requests_data.append(request_item)
             logger.info(f"Se encontraron {len(requests_data)} solicitudes")
@@ -351,12 +352,12 @@ class RequestAsignationService(BaseService):
             data = []
 
             for req in requests:
-                person = req.aprendiz.person
-                ficha = req.aprendiz.ficha
+                person = req.apprentice.person
+                ficha = req.apprentice.ficha
                 programa = ficha.program.name if ficha and hasattr(ficha, 'program') and ficha.program else None
                 data.append({
                     "id": req.id,
-                    "aprendiz_id": req.aprendiz.id,
+                    "apprentice_id": req.apprentice.id,
                     "nombre": f"{person.first_name} {person.first_last_name} {person.second_last_name}",
                     "tipo_identificacion": getattr(person, 'type_identification_id', None),
                     "numero_identificacion": str(person.number_identification),

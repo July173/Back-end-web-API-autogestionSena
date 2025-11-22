@@ -6,7 +6,9 @@ from apps.general.entity.models import PersonSede
 from apps.general.entity.models import Apprentice, Sede
 from apps.assign.entity.models import Enterprise, Boss, HumanTalent, ModalityProductiveStage, RequestAsignation
 from django.db import transaction
+from django.utils import timezone
 from apps.general.entity.models import Ficha
+from dateutil.relativedelta import relativedelta
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,8 +21,8 @@ class RequestAsignationRepository(BaseRepository):
 
     def filter_form_requests(self, search=None, request_state=None, program_id=None):
         queryset = RequestAsignation.objects.select_related(
-            'aprendiz__person',
-            'aprendiz__ficha__program',
+            'apprentice__person',
+            'apprentice__ficha__program',
             'enterprise',
             'modality_productive_stage'
         ).all()
@@ -28,10 +30,10 @@ class RequestAsignationRepository(BaseRepository):
         #  Filtro por texto (nombre o número de documento)
         if search:
             queryset = queryset.filter(
-                Q(aprendiz__person__first_name__icontains=search) |
-                Q(aprendiz__person__first_last_name__icontains=search) |
-                Q(aprendiz__person__second_last_name__icontains=search) |
-                Q(aprendiz__person__number_identification__icontains=search)
+                Q(apprentice__person__first_name__icontains=search) |
+                Q(apprentice__person__first_last_name__icontains=search) |
+                Q(apprentice__person__second_last_name__icontains=search) |
+                Q(apprentice__person__number_identification__icontains=search)
             )
 
         #  Filtro por estado
@@ -40,7 +42,7 @@ class RequestAsignationRepository(BaseRepository):
 
         #  Filtro por programa
         if program_id:
-            queryset = queryset.filter(aprendiz__ficha__program_id=program_id)
+            queryset = queryset.filter(apprentice__ficha__program_id=program_id)
 
         return queryset
 
@@ -51,8 +53,8 @@ class RequestAsignationRepository(BaseRepository):
         """
         try:
             request_asignation = RequestAsignation.objects.select_related(
-                'aprendiz__person',
-                'aprendiz__ficha',
+                'apprentice__person',
+                'apprentice__ficha',
                 'enterprise',
                 'enterprise__boss',
                 'enterprise__human_talent',
@@ -63,9 +65,13 @@ class RequestAsignationRepository(BaseRepository):
                 regional = getattr(modality, 'regional', None)
                 center = getattr(modality, 'center', None)
                 sede = getattr(modality, 'sede', None)
+                # Obtener la sede a través de PersonSede
+                person = request_asignation.apprentice.person
+                person_sede = PersonSede.objects.filter(person=person).first()
+                sede = person_sede.sede if person_sede and person_sede.sede else sede
                 return (
-                    request_asignation.aprendiz.person,
-                    request_asignation.aprendiz,
+                    person,
+                    request_asignation.apprentice,
                     request_asignation.enterprise,
                     request_asignation.enterprise.boss,
                     request_asignation.enterprise.human_talent,
@@ -136,13 +142,28 @@ class RequestAsignationRepository(BaseRepository):
             logger.info(f"Talento humano creado con ID: {human_talent.id}")
             
             # 6. Crear RequestAsignation con PDF
+            # Manejar fechas opcionales: request_date no puede ser NULL, usar hoy si no se provee
+            fecha_inicio = data.get('fecha_inicio_contrato')
+            fecha_fin = data.get('fecha_fin_contrato')
+            request_date_value = fecha_inicio if fecha_inicio else timezone.now().date()
+
+            # Determinar fecha de fin por defecto (6 meses desde la fecha de inicio o request_date)
+            if fecha_fin:
+                fecha_fin_value = fecha_fin
+            else:
+                base_for_end = fecha_inicio if fecha_inicio else request_date_value
+                fecha_fin_value = base_for_end + relativedelta(months=6)
+
             request_asignation_data = {
                 'apprentice': aprendiz,
                 'enterprise': enterprise,
                 'modality_productive_stage': modality,
-                'request_date': data['fecha_inicio_contrato'],  # Usar fecha de inicio como fecha de solicitud
-                'date_start_production_stage': data['fecha_inicio_contrato'],
-                'date_end_production_stage': data['fecha_fin_contrato'],
+                'request_date': request_date_value,
+                # Si no se proporciona fecha de inicio, usar request_date_value
+                # para evitar insertar NULL cuando la columna en la BD no lo permita.
+                'date_start_production_stage': fecha_inicio if fecha_inicio else request_date_value,
+                # Si no se proporciona fecha fin, usar fecha_fin_value (por ejemplo +6 meses)
+                'date_end_production_stage': fecha_fin_value,
                 'pdf_request': data.get('pdf_request'),  # El archivo PDF
                 'request_state': RequestState.SIN_ASIGNAR,  # Estado inicial correcto del enum
             }
@@ -161,20 +182,20 @@ class RequestAsignationRepository(BaseRepository):
         Usa RequestAsignation como tabla principal que conecta todo.
         """
         logger.info("Obteniendo todas las solicitudes de formulario")
-        
+
         # Obtener todas las RequestAsignation con sus relaciones optimizadas
         request_asignations = RequestAsignation.objects.select_related(
-            'aprendiz__person',           # Person a través de Aprendiz
-            'aprendiz__ficha',            # Ficha del aprendiz
-            'enterprise',                 # Enterprise
-            'enterprise__boss',           # Boss (OneToOne)
-            'enterprise__human_talent',   # HumanTalent (OneToOne)
-            'modality_productive_stage'   # ModalityProductiveStage
+            'apprentice__person',           # Person a través de Apprentice
+            'apprentice__ficha',            # Ficha del aprendiz
+            'enterprise',                   # Enterprise
+            'enterprise__boss',             # Boss (OneToOne)
+            'enterprise__human_talent',     # HumanTalent (OneToOne)
+            'modality_productive_stage'     # ModalityProductiveStage
         ).all()
-        
+
         # Lista para almacenar las solicitudes encontradas
         form_requests = []
-        
+
         for request_asignation in request_asignations:
             # Verificar que tenga boss y human talent
             if hasattr(request_asignation.enterprise, 'boss') and hasattr(request_asignation.enterprise, 'human_talent'):
@@ -184,12 +205,13 @@ class RequestAsignationRepository(BaseRepository):
                 sede = getattr(modality, 'sede', None)
                 # Crear tupla con las entidades relacionadas
                 # Obtener la sede a través de PersonSede
-                person = request_asignation.aprendiz.person
-                person_sede = PersonSede.objects.filter(PersonId=person).first()
-                sede = person_sede.SedeId if person_sede and person_sede.SedeId else None
+                person = request_asignation.apprentice.person
+                # Ajustar aquí también el filtro de PersonSede:
+                person_sede = PersonSede.objects.filter(person=person).first()
+                sede = person_sede.sede if person_sede and person_sede.sede else None
                 form_request = (
                     person,
-                    request_asignation.aprendiz,
+                    request_asignation.apprentice,
                     request_asignation.enterprise,
                     request_asignation.enterprise.boss,
                     request_asignation.enterprise.human_talent,

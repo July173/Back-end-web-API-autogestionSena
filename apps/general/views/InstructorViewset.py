@@ -9,11 +9,13 @@ from apps.general.entity.serializers.CreateInstructor.InstructorSerializer impor
 from apps.general.entity.models import Instructor
 from apps.general.entity.serializers.CreateInstructor.CreateInstructorSerializer import CreateInstructorSerializer
 from apps.general.entity.serializers.CreateInstructor.GetInstructorSerializer import GetInstructorSerializer
+from apps.general.entity.serializers.CreateInstructor.AsignationInstructorWithMessageSerializer import AsignationInstructorWithMessageSerializer
 
 
 class InstructorViewset(BaseViewSet):
+
     
-    
+
     def get_queryset(self):
         return Instructor.objects.all()
     
@@ -261,3 +263,22 @@ class InstructorViewset(BaseViewSet):
         serializer = self.get_serializer(instructors, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(
+        operation_description="Lista todas las asignaciones de un instructor, incluyendo datos del aprendiz y la solicitud.",
+        tags=["Instructor"],
+        responses={200: openapi.Response("Lista de asignaciones", 
+            schema=openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Items(type=openapi.TYPE_OBJECT)
+            )
+        )}
+    )
+    @action(detail=True, methods=['get'], url_path='asignations')
+    def asignations(self, request, pk=None):
+        """
+        Endpoint para obtener todas las asignaciones de un instructor específico.
+        """
+        service = InstructorService()
+        asignaciones = service.get_asignations(pk)
+        serializer = AsignationInstructorWithMessageSerializer(asignaciones, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

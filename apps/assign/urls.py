@@ -9,6 +9,7 @@ from apps.assign.views.AsignationInstructorViewset import AsignationInstructorVi
 from apps.assign.views.AsignationInstructorHistoryViewset import AsignationInstructorHistoryViewset
 from apps.assign.views.VisitFollowingViewset import VisitFollowingViewset
 from apps.assign.views.FormRequestPDFViewset import FormRequestPDFAPIView
+from apps.assign.views.MessageViewset import MessageViewset
 
 router = DefaultRouter()
 router.register(r'enterprise', EnterpriseViewset, basename='assign_enterprise')
@@ -19,7 +20,7 @@ router.register(r'request_asignation', RequestAsignationViewset, basename='assig
 router.register(r'asignation_instructor', AsignationInstructorViewset, basename='assign_asignation_instructor')
 router.register(r'asignation_instructor_history', AsignationInstructorHistoryViewset, basename='assign_asignation_instructor_history')
 router.register(r'visit_following', VisitFollowingViewset, basename='assign_visit_following')
-# FormRequestViewset ya no se registra en el router porque es APIView
+router.register(r'message', MessageViewset, basename='assign_message')
 
 urlpatterns = [
     path('', include(router.urls)),

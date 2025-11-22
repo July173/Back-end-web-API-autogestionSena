@@ -9,8 +9,8 @@ class FormRequestSerializer(serializers.Serializer):
     ficha = serializers.IntegerField(help_text="ID de la ficha")
 
     # Data created in the request
-    fecha_inicio_contrato = serializers.DateField(help_text="Fecha de inicio de contrato de aprendizaje")
-    fecha_fin_contrato = serializers.DateField(help_text="Fecha de fin de contrato de aprendizaje")
+    fecha_inicio_contrato = serializers.DateField(help_text="Fecha de inicio de contrato de aprendizaje", required=False, allow_null=True)
+    fecha_fin_contrato = serializers.DateField(help_text="Fecha de fin de contrato de aprendizaje", required=False, allow_null=True)
     enterprise_name = serializers.CharField(max_length=100, help_text="Nombre de la empresa")
     enterprise_nit = serializers.CharField(max_length=100, help_text="NIT de la empresa (solo números)")
     enterprise_location = serializers.CharField(max_length=255, help_text="Ubicación de la empresa")

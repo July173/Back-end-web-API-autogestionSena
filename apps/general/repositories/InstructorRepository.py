@@ -7,7 +7,7 @@ class InstructorRepository(BaseRepository):
         super().__init__(Instructor)
     
     def get_filtered_instructors(self, search=None, knowledge_area_id=None):
-        queryset = self.model.objects.select_related('person', 'knowledgeArea').all()
+        queryset = self.model.objects.select_related('person', 'knowledge_area').all()
         if search:
             queryset = queryset.filter(
                 Q(person__first_name__icontains=search) |
@@ -17,5 +17,5 @@ class InstructorRepository(BaseRepository):
                 Q(person__number_identification__icontains=search)
             )
         if knowledge_area_id:
-            queryset = queryset.filter(knowledgeArea__id=knowledge_area_id)
+            queryset = queryset.filter(knowledge_area__id=knowledge_area_id)
         return list(queryset)
