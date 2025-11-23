@@ -19,7 +19,7 @@ class RequestAsignationRepository(BaseRepository):
     def __init__(self):
         super().__init__(RequestAsignation)
 
-    def filter_form_requests(self, search=None, request_state=None, program_id=None):
+    def filter_form_requests(self, search=None, request_state=None, program_id=None, modality_id=None):
         queryset = RequestAsignation.objects.select_related(
             'apprentice__person',
             'apprentice__ficha__program',
@@ -43,6 +43,15 @@ class RequestAsignationRepository(BaseRepository):
         #  Filtro por programa
         if program_id:
             queryset = queryset.filter(apprentice__ficha__program_id=program_id)
+
+        #  Filtro por modalidad de etapa práctica
+        if modality_id:
+            try:
+                modality_id = int(modality_id)
+                queryset = queryset.filter(modality_productive_stage_id=modality_id)
+            except ValueError:
+                # invalid modality id, no filter applied (or could raise)
+                pass
 
         return queryset
 

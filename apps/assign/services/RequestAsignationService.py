@@ -346,9 +346,9 @@ class RequestAsignationService(BaseService):
             return self.error_response(f"Error al obtener información del dashboard: {str(e)}", "dashboard_error")
 
 
-    def filter_form_requests(self, search=None, request_state=None, program_id=None):
+    def filter_form_requests(self, search=None, request_state=None, program_id=None, modality_id=None):
         try:
-            requests = self.repository.filter_form_requests(search, request_state, program_id)
+            requests = self.repository.filter_form_requests(search, request_state, program_id, modality_id)
             data = []
 
             for req in requests:
@@ -363,7 +363,9 @@ class RequestAsignationService(BaseService):
                     "numero_identificacion": str(person.number_identification),
                     "fecha_solicitud": str(req.request_date),
                     "request_state": req.request_state,
-                    "programa": programa
+                    "programa": programa,
+                    "modalidad": getattr(req.modality_productive_stage, 'name_modality', None) if hasattr(req, 'modality_productive_stage') else None,
+                    "modalidad_id": req.modality_productive_stage.id if getattr(req, 'modality_productive_stage', None) else None
                 })
 
             return {
