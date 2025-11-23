@@ -6,8 +6,6 @@ from apps.assign.entity.enums.request_state_enum import RequestState
 
 class AsignationInstructorWithMessageSerializer(serializers.ModelSerializer):
     messages = serializers.SerializerMethodField(read_only=True)
-    content = serializers.SerializerMethodField(read_only=True)
-    type_message = serializers.SerializerMethodField(read_only=True)
 
     instructor = serializers.PrimaryKeyRelatedField(queryset=Instructor.objects.all())
     request_asignation = serializers.PrimaryKeyRelatedField(queryset=RequestAsignation.objects.all())
@@ -27,8 +25,6 @@ class AsignationInstructorWithMessageSerializer(serializers.ModelSerializer):
             'id',
             'instructor',
             'request_asignation',
-            'content',
-            'type_message',
             'request_state',
             'aprendiz_id',
             'nombre',
@@ -52,20 +48,6 @@ class AsignationInstructorWithMessageSerializer(serializers.ModelSerializer):
             ]
         except Exception:
             return []
-
-    def get_content(self, obj):
-        try:
-            message = obj.request_asignation.messages.last()
-            return message.content if message else None
-        except Exception:
-            return None
-
-    def get_type_message(self, obj):
-        try:
-            message = obj.request_asignation.messages.last()
-            return message.type_message if message else None
-        except Exception:
-            return None
 
     def get_aprendiz_id(self, obj):
         try:
