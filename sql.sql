@@ -326,11 +326,6 @@ INSERT INTO `role_form_permission` (`id`, `role_id`, `form_id`, `permission_id`,
 (93, 1, 9, 3, NULL, true),
 (94, 1, 9, 4, NULL, true),
 (95, 1, 9, 5, NULL, true),
-(96, 1, 11, 1, NULL, true),
-(97, 1, 11, 2, NULL, true),
-(98, 1, 11, 3, NULL, true),
-(99, 1, 11, 4, NULL, true),
-(100, 1, 11, 5, NULL, true),
 (101, 5, 10, 1, NULL, true),
 (102, 5, 10, 2, NULL, true),
 (103, 5, 10, 3, NULL, true),
@@ -340,7 +335,13 @@ INSERT INTO `role_form_permission` (`id`, `role_id`, `form_id`, `permission_id`,
 (107, 5, 3, 2, NULL, true),
 (108, 5, 3, 3, NULL, true),
 (109, 5, 3, 4, NULL, true),
-(110, 5, 3, 5, NULL, true);
+(110, 5, 3, 5, NULL, true),
+(111, 3, 11, 1, NULL, true),
+(112, 3, 11, 2, NULL, true),
+(113, 3, 11, 3, NULL, true),
+(114, 3, 11, 4, NULL, true),
+(115, 3, 11, 5, NULL, true);
+
 
 
 
@@ -356,7 +357,7 @@ INSERT INTO `apprentice` (`id`, `active`, `delete_at`, `ficha_id`, `person_id`) 
 INSERT INTO `instructor` ( `id`, `contract_start_date`,  `contract_end_date`,  `assigned_learners`,  `max_assigned_learners`,  `is_followup_instructor`,  `active`,  `delete_at`,  `contract_type_id`,  `knowledge_area_id`, `person_id`
 ) VALUES
 (1, '2024-01-15', '2025-01-15', 0, 0, 0, 1, NULL, 2, 1, 2),
-(2, '2023-08-01', '2024-08-01', 5, 80, 1, 1, NULL, 1, 1, 3),
+(2, '2023-08-01', '2024-08-01', 0, 80, 1, 1, NULL, 1, 1, 3),
 (3, '2023-08-01', '2024-08-01', 0, 0, 0, 1, NULL, 1, 1, 4);
 
 INSERT INTO `person_sede` (`id`, `active`, `delete_at`, `person_id`, `sede_id`) VALUES
