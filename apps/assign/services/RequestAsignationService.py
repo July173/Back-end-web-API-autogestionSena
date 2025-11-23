@@ -272,13 +272,13 @@ class RequestAsignationService(BaseService):
             aprendiz = Apprentice.objects.select_related('person', 'ficha').get(pk=aprendiz_id)
             
             # Buscar la solicitud más reciente del aprendiz
+            # Boss es una relación 1:N (Boss.enterprise FK) -> usar prefetch_related para traer bosses
             latest_request = RequestAsignation.objects.filter(
                 aprendiz=aprendiz
             ).select_related(
                 'enterprise',
-                'enterprise__boss',
                 'modality_productive_stage'
-            ).order_by('-request_date').first()
+            ).prefetch_related('enterprise__bosses').order_by('-request_date').first()
             
             result = {
                 'has_request': latest_request is not None,
@@ -290,8 +290,10 @@ class RequestAsignationService(BaseService):
             if latest_request:
                 # Obtener el nombre del boss si existe
                 boss_name = None
-                if hasattr(latest_request.enterprise, 'boss') and latest_request.enterprise.boss:
-                    boss_name = latest_request.enterprise.boss.name_boss
+                # Obtener primer boss si existe
+                if latest_request.enterprise and latest_request.enterprise.bosses.exists():
+                    boss_obj = latest_request.enterprise.bosses.first()
+                    boss_name = boss_obj.name_boss if boss_obj else None
                 
                 # Información de la solicitud
                 result['request'] = {

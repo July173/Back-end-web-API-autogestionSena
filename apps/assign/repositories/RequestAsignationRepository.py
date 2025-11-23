@@ -61,15 +61,18 @@ class RequestAsignationRepository(BaseRepository):
         Obtener una solicitud de formulario por su ID con todas sus relaciones.
         """
         try:
+            # Note: 'boss' is a reverse FK (Enterprise -> Boss is 1:N via Boss.enterprise)
             request_asignation = RequestAsignation.objects.select_related(
                 'apprentice__person',
                 'apprentice__ficha',
                 'enterprise',
-                'enterprise__boss',
                 'enterprise__human_talent',
                 'modality_productive_stage'
             ).get(pk=request_id)
-            if hasattr(request_asignation.enterprise, 'boss') and hasattr(request_asignation.enterprise, 'human_talent'):
+            # Verificar que exista al menos un boss y el human_talent asociado
+            has_boss = request_asignation.enterprise.bosses.exists() if request_asignation.enterprise else False
+            has_human_talent = hasattr(request_asignation.enterprise, 'human_talent') and request_asignation.enterprise.human_talent
+            if has_boss and has_human_talent:
                 modality = request_asignation.modality_productive_stage
                 regional = getattr(modality, 'regional', None)
                 center = getattr(modality, 'center', None)
@@ -78,11 +81,13 @@ class RequestAsignationRepository(BaseRepository):
                 person = request_asignation.apprentice.person
                 person_sede = PersonSede.objects.filter(person=person).first()
                 sede = person_sede.sede if person_sede and person_sede.sede else sede
+                # Obtener el primer boss asociado (si hay varios, se toma el primero)
+                first_boss = request_asignation.enterprise.bosses.first()
                 return (
                     person,
                     request_asignation.apprentice,
                     request_asignation.enterprise,
-                    request_asignation.enterprise.boss,
+                    first_boss,
                     request_asignation.enterprise.human_talent,
                     modality,
                     request_asignation,
@@ -119,19 +124,9 @@ class RequestAsignationRepository(BaseRepository):
             
             # CREACIÓN DE ENTIDADES (solo operaciones BD)
             
-            # 3. Crear Boss primero
-            boss_data = {
-                'name_boss': data['boss_name'],
-                'phone_number': data['boss_phone'],
-                'email_boss': data['boss_email'],
-                'position': data['boss_position'],
-            }
-            boss = Boss.objects.create(**boss_data)
-            logger.info(f"Jefe creado con ID: {boss.id}")
 
-            # 4. Crear Enterprise con el boss asignado
+            # 3. Crear Enterprise primero (antes boss era OneToOne en Enterprise)
             enterprise_data = {
-                'boss': boss,
                 'name_enterprise': data['enterprise_name'],
                 'nit_enterprise': data['enterprise_nit'],
                 'locate': data['enterprise_location'],
@@ -139,6 +134,17 @@ class RequestAsignationRepository(BaseRepository):
             }
             enterprise = Enterprise.objects.create(**enterprise_data)
             logger.info(f"Empresa creada con ID: {enterprise.id}")
+
+            # 4. Crear Boss y relacionarlo con la enterprise (FK en Boss)
+            boss_data = {
+                'enterprise': enterprise,
+                'name_boss': data['boss_name'],
+                'phone_number': data['boss_phone'],
+                'email_boss': data['boss_email'],
+                'position': data['boss_position'],
+            }
+            boss = Boss.objects.create(**boss_data)
+            logger.info(f"Jefe creado con ID: {boss.id} (enterprise_id={enterprise.id})")
 
             # 5. Crear HumanTalent
             human_talent_data = {
@@ -193,11 +199,11 @@ class RequestAsignationRepository(BaseRepository):
         logger.info("Obteniendo todas las solicitudes de formulario")
 
         # Obtener todas las RequestAsignation con sus relaciones optimizadas
+        # Nota: Boss es ahora reverse FK (Enterprise.bosses), por lo que no se puede select_related
         request_asignations = RequestAsignation.objects.select_related(
             'apprentice__person',           # Person a través de Apprentice
             'apprentice__ficha',            # Ficha del aprendiz
             'enterprise',                   # Enterprise
-            'enterprise__boss',             # Boss (OneToOne)
             'enterprise__human_talent',     # HumanTalent (OneToOne)
             'modality_productive_stage'     # ModalityProductiveStage
         ).all()
@@ -206,8 +212,10 @@ class RequestAsignationRepository(BaseRepository):
         form_requests = []
 
         for request_asignation in request_asignations:
-            # Verificar que tenga boss y human talent
-            if hasattr(request_asignation.enterprise, 'boss') and hasattr(request_asignation.enterprise, 'human_talent'):
+            # Verificar que tenga al menos un boss y human_talent
+            has_boss = request_asignation.enterprise.bosses.exists() if request_asignation.enterprise else False
+            has_human_talent = hasattr(request_asignation.enterprise, 'human_talent') and request_asignation.enterprise.human_talent
+            if has_boss and has_human_talent:
                 modality = request_asignation.modality_productive_stage
                 regional = getattr(modality, 'regional', None)
                 center = getattr(modality, 'center', None)
@@ -218,11 +226,12 @@ class RequestAsignationRepository(BaseRepository):
                 # Ajustar aquí también el filtro de PersonSede:
                 person_sede = PersonSede.objects.filter(person=person).first()
                 sede = person_sede.sede if person_sede and person_sede.sede else None
+                first_boss = request_asignation.enterprise.bosses.first()
                 form_request = (
                     person,
                     request_asignation.apprentice,
                     request_asignation.enterprise,
-                    request_asignation.enterprise.boss,
+                    first_boss,
                     request_asignation.enterprise.human_talent,
                     sede,
                     modality,
