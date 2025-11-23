@@ -12,6 +12,7 @@ from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from apps.assign.entity.serializers.form.FormRequestSerializer import FormRequestSerializer
+from apps.assign.entity.serializers.form.CombinedFormRequestSerializer import CombinedFormRequestSerializer
 
 class RequestAsignationViewset(BaseViewSet):
     service_class = RequestAsignationService
@@ -21,7 +22,7 @@ class RequestAsignationViewset(BaseViewSet):
     def get_serializer(self, *args, **kwargs):
         # Usa FormRequestSerializer solo en acciones específicas
         if hasattr(self, 'action') and self.action in [
-            'create_form_request', 'list_form_requests', 'form_request_detail', 'reject_form_request', 'get_pdf_url'
+            'list_form_requests', 'form_request_detail', 'reject_form_request', 'get_pdf_url'
         ]:
             return FormRequestSerializer(*args, **kwargs)
         return self.serializer_class(*args, **kwargs)
@@ -100,9 +101,23 @@ class RequestAsignationViewset(BaseViewSet):
    
     #--- Create Form Request -------
     @swagger_auto_schema(
-        operation_description="Crear una nueva solicitud de formulario (sin PDF)",
+        operation_description="Crear una nueva solicitud de formulario (sin PDF) — paquete completo (empresa, jefe, talentoHumano, solicitud)",
         tags=["FormRequest"],
-        request_body=FormRequestSerializer,
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'empresa': openapi.Schema(type=openapi.TYPE_OBJECT),
+                'jefe': openapi.Schema(type=openapi.TYPE_OBJECT),
+                'talentoHumano': openapi.Schema(type=openapi.TYPE_OBJECT),
+                'solicitud': openapi.Schema(type=openapi.TYPE_OBJECT),
+            },
+            example={
+                "empresa": {"id": None, "nombre": "Nueva empresa SAS", "nit": "123456789", "direccion": "Calle 10", "correo": "empresa@example.com", "telefono": "12345"},
+                "jefe": {"id": None, "nombre": "Juan Perez", "correo": "juan@empresa.com", "telefono": "1111"},
+                "talentoHumano": {"id": None, "nombre": "Ana Rojas", "correo": "ana@empresa.com", "telefono": "2222"},
+                "solicitud": {"apprentice": 1, "ficha": 1, "descripcion": "Necesitamos un aprendizaje", "fecha_inicio_contrato": "2025-11-23", "fecha_fin_contrato": "2026-05-23", "sede": 1, "modality_productive_stage": 1}
+            }
+        ),
         responses={
             201: openapi.Response("Solicitud creada exitosamente"),
             400: openapi.Response("Error: {'success': False, 'error_type': 'not_found', 'message': 'Entidad no encontrada', 'data': None}")
@@ -110,14 +125,15 @@ class RequestAsignationViewset(BaseViewSet):
     )
     @action(detail=False, methods=['post'], url_path='form-request')
     def create_form_request(self, request):
-        serializer = FormRequestSerializer(data=request.data)
+        # Nuevo flujo: aceptar el paquete completo (empresa, jefe, talentoHumano, solicitud)
+        serializer = CombinedFormRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({
                 'success': False,
-                'message': 'Error en los datos de entrada',
+                'message': 'Error en los datos de entrada (paquete combinado)',
                 'errors': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
-        result = self.service_class().create_form_request(serializer.validated_data)
+        result = self.service_class().create_complete_request_package(serializer.validated_data)
         if result['success']:
             request_id = result['data']['request_asignation']['id'] if result['data'] and 'request_asignation' in result['data'] else None
             return Response({

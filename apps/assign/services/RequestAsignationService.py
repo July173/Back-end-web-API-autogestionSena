@@ -12,6 +12,7 @@ from apps.assign.entity.models import RequestAsignation
 from apps.general.entity.models import PersonSede
 from dateutil.relativedelta import relativedelta
 from apps.assign.entity.models import AsignationInstructor
+from apps.assign.entity.models import Enterprise, Boss, HumanTalent
 
 logger = logging.getLogger(__name__)
 
@@ -152,82 +153,7 @@ class RequestAsignationService(BaseService):
         except Exception as e:
             return self.error_response(f"Error al obtener la solicitud: {e}", "get_form_request_by_id")
 
-    def create_form_request(self, validated_data):
-        try:
-            logger.info(f"Iniciando creación de solicitud para aprendiz ID: {validated_data.get('apprentice')}")
-            apprentice = Apprentice.objects.get(pk=validated_data['apprentice'])
-            ficha = Ficha.objects.get(pk=validated_data['ficha'])
-            last_request = RequestAsignation.objects.filter(apprentice=apprentice).order_by('-id').first()
-            if last_request and last_request.request_state != RequestState.RECHAZADO:
-                return self.error_response("Solo puedes volver a enviar el formulario si tu última solicitud fue rechazada.", "invalid_state")
-            sede = Sede.objects.get(pk=validated_data['sede'])
-            ModalityProductiveStage.objects.get(pk=validated_data['modality_productive_stage'])
-            fecha_inicio = validated_data.get('fecha_inicio_contrato')
-            fecha_fin = validated_data.get('fecha_fin_contrato')
-            if fecha_inicio and fecha_fin:
-                diferencia = relativedelta(fecha_fin, fecha_inicio)
-                meses = diferencia.years * 12 + diferencia.months
-                if meses < 6 or (meses == 6 and diferencia.days < 0):
-                    return self.error_response("La diferencia entre la fecha de inicio y fin de contrato debe ser de al menos 6 meses.", "invalid_dates")
-            logger.info("Validaciones completadas exitosamente")
-            with transaction.atomic():
-                apprentice_obj, ficha_obj, enterprise, boss, human_talent, sede, modality, request_asignation = self.repository.create_all_dates_form_request(validated_data)
-                person = apprentice_obj.person
-                PersonSede.objects.update_or_create(
-                    person=person,
-                    defaults={"sede": sede}
-                )
-                response = {
-                    'success': True,
-                    'message': 'Solicitud creada exitosamente',
-                    'data': {
-                        'aprendiz': {
-                            'id': apprentice_obj.id,
-                            'ficha_id': ficha_obj.id,
-                            'active': apprentice_obj.active
-                        },
-                        'enterprise': {
-                            'id': enterprise.id,
-                            'name': enterprise.name_enterprise,
-                            'nit': enterprise.nit_enterprise,
-                            'location': enterprise.locate,
-                            'email': enterprise.email_enterprise
-                        },
-                        'boss': {
-                            'id': boss.id,
-                            'name': boss.name_boss,
-                            'phone': boss.phone_number,
-                            'email': boss.email_boss,
-                            'position': boss.position
-                        },
-                        'human_talent': {
-                            'id': human_talent.id,
-                            'name': human_talent.name,
-                            'email': human_talent.email,
-                            'phone': human_talent.phone_number
-                        },
-                        'references': {
-                            'sede': {'id': sede.id, 'name': sede.name},
-                            'modality': {'id': modality.id, 'name': modality.name_modality}
-                        },
-                        'request_asignation': {
-                            'id': request_asignation.id,
-                            'request_date': request_asignation.request_date,
-                            'date_start_production_stage': request_asignation.date_start_production_stage,
-                            'date_end_production_stage': getattr(request_asignation, 'date_end_production_stage', None),
-                            'request_state': request_asignation.request_state
-                        }
-                    }
-                }
-                logger.info("Solicitud creada exitosamente")
-                return response
-        except (Apprentice.DoesNotExist, Ficha.DoesNotExist) as e:
-            return self.error_response(f"Entidad no encontrada: {str(e)}", "not_found")
-        except (Sede.DoesNotExist, ModalityProductiveStage.DoesNotExist) as e:
-            return self.error_response(f"Entidad de referencia no encontrada: {str(e)}", "not_found")
-        except Exception as e:
-            return self.error_response(f"Error al crear solicitud: {e}", "create_form_request")
-
+   
     def list_form_requests(self):
         """
         Listar solicitudes mostrando solo Nombre, Tipo de identificación, Número y Fecha Solicitud.
@@ -378,3 +304,159 @@ class RequestAsignationService(BaseService):
 
         except Exception as e:
             return self.error_response(f"Error al filtrar solicitudes: {e}", "filter_form_requests")
+
+
+    def create_complete_request_package(self, package_data):
+        """Recibe un paquete con estructura:
+        {
+          'empresa': {...}, 'jefe': {...}, 'talentoHumano': {...}, 'solicitud': {...}
+        }
+        Crea o usa entidades según 'id' y crea la solicitud en una transacción.
+        """
+        try:
+            with transaction.atomic():
+                empresa_payload = package_data.get('empresa', {})
+                jefe_payload = package_data.get('jefe', {})
+                talento_payload = package_data.get('talentoHumano', {})
+                solicitud_payload = package_data.get('solicitud', {})
+
+                # --- Empresa ---
+                enterprise = None
+                if empresa_payload.get('id'):
+                    enterprise = Enterprise.objects.get(pk=empresa_payload.get('id'))
+                else:
+                    name = empresa_payload.get('nombre') or empresa_payload.get('name')
+                    nit = empresa_payload.get('nit') or empresa_payload.get('nit_enterprise')
+                    locate = empresa_payload.get('direccion') or empresa_payload.get('locate')
+                    email = empresa_payload.get('correo') or empresa_payload.get('email') or empresa_payload.get('enterprise_email')
+                    enterprise = Enterprise.objects.create(
+                        name_enterprise=name or '',
+                        nit_enterprise=nit or '',
+                        locate=locate or '',
+                        email_enterprise=email or ''
+                    )
+
+                # --- Jefe (Boss) ---
+                boss = None
+                if jefe_payload.get('id'):
+                    boss = Boss.objects.get(pk=jefe_payload.get('id'))
+                else:
+                    boss = Boss.objects.create(
+                        enterprise=enterprise,
+                        name_boss=jefe_payload.get('nombre') or '',
+                        phone_number=jefe_payload.get('telefono') or 0,
+                        email_boss=jefe_payload.get('correo') or '',
+                        position=jefe_payload.get('cargo') or ''
+                    )
+
+                # --- Talento Humano --- (OneToOne en el modelo)
+                human_talent = None
+                if talento_payload.get('id'):
+                    human_talent = HumanTalent.objects.get(pk=talento_payload.get('id'))
+                else:
+                    # Si ya existe un human_talent en la empresa, reutilizarlo
+                    if hasattr(enterprise, 'human_talent') and enterprise.human_talent:
+                        human_talent = enterprise.human_talent
+                    else:
+                        human_talent = HumanTalent.objects.create(
+                            enterprise=enterprise,
+                            name=talento_payload.get('nombre') or '',
+                            email=talento_payload.get('correo') or '',
+                            phone_number=talento_payload.get('telefono') or 0
+                        )
+
+                # --- Solicitud ---
+                # Requiere apprentice y ficha en contextos anteriores; leer campos de fechas, sede y modalidad
+                apprentice_id = solicitud_payload.get('apprentice')
+                ficha_id = solicitud_payload.get('ficha')
+                fecha_inicio = solicitud_payload.get('fecha_inicio_contrato')
+                fecha_fin = solicitud_payload.get('fecha_fin_contrato')
+                sede_id = solicitud_payload.get('sede')
+                modality_id = solicitud_payload.get('modality_productive_stage')
+
+                if not apprentice_id:
+                    return self.error_response('El campo solicitud.apprentice es requerido', 'missing_apprentice')
+
+                apprentice = Apprentice.objects.get(pk=apprentice_id)
+
+                # Verificar estado de última solicitud
+                last_request = RequestAsignation.objects.filter(apprentice=apprentice).order_by('-id').first()
+                if last_request and last_request.request_state != RequestState.RECHAZADO:
+                    return self.error_response("Solo puedes volver a enviar el formulario si tu última solicitud fue rechazada.", "invalid_state")
+
+                ficha = None
+                if ficha_id:
+                    ficha = Ficha.objects.get(pk=ficha_id)
+                    apprentice.ficha = ficha
+                    apprentice.save()
+
+                # Validar sede si se envía
+                sede = None
+                if sede_id is not None:
+                    sede = Sede.objects.get(pk=sede_id)
+
+                # Validar modalidad
+                modality = None
+                if modality_id:
+                    modality = ModalityProductiveStage.objects.get(pk=modality_id)
+
+                # Validar rango de fechas (si ambos provistos)
+                if fecha_inicio and fecha_fin:
+                    diferencia = relativedelta(fecha_fin, fecha_inicio)
+                    meses = diferencia.years * 12 + diferencia.months
+                    if meses < 6 or (meses == 6 and diferencia.days < 0):
+                        return self.error_response("La diferencia entre la fecha de inicio y fin de contrato debe ser de al menos 6 meses.", "invalid_dates")
+
+                from django.utils import timezone
+                request_date_value = fecha_inicio if fecha_inicio else timezone.now().date()
+
+                # Determinar fecha de fin por defecto (6 meses desde la fecha de inicio o request_date)
+                if fecha_fin:
+                    fecha_fin_value = fecha_fin
+                else:
+                    base_for_end = fecha_inicio if fecha_inicio else request_date_value
+                    fecha_fin_value = base_for_end + relativedelta(months=6)
+
+                request_asignation = RequestAsignation.objects.create(
+                    apprentice=apprentice,
+                    enterprise=enterprise,
+                    modality_productive_stage=modality if modality else ModalityProductiveStage.objects.first(),
+                    request_date=request_date_value,
+                    date_start_production_stage=fecha_inicio if fecha_inicio else request_date_value,
+                    date_end_production_stage=fecha_fin_value,
+                    request_state=RequestState.SIN_ASIGNAR
+                )
+
+                # Actualizar PersonSede si se proporcionó sede
+                if sede:
+                    person = apprentice.person
+                    PersonSede.objects.update_or_create(
+                        person=person,
+                        defaults={"sede": sede}
+                    )
+
+                return {
+                    'success': True,
+                    'message': 'Solicitud creada exitosamente',
+                    'data': {
+                        'enterprise': {'id': enterprise.id},
+                        'boss': {'id': boss.id},
+                        'human_talent': {'id': human_talent.id},
+                        'request_asignation': {'id': request_asignation.id}
+                    }
+                }
+
+        except Enterprise.DoesNotExist:
+            return self.error_response('Empresa no encontrada', 'not_found')
+        except Boss.DoesNotExist:
+            return self.error_response('Jefe no encontrado', 'not_found')
+        except HumanTalent.DoesNotExist:
+            return self.error_response('Talento humano no encontrado', 'not_found')
+        except Apprentice.DoesNotExist:
+            return self.error_response('Aprendiz no encontrado', 'not_found')
+        except Ficha.DoesNotExist:
+            return self.error_response('Ficha no encontrada', 'not_found')
+        except ModalityProductiveStage.DoesNotExist:
+            return self.error_response('Modalidad no encontrada', 'not_found')
+        except Exception as e:
+            return self.error_response(f"Error al crear solicitud completa: {e}", 'create_complete_request')
