@@ -315,10 +315,11 @@ class RequestAsignationService(BaseService):
         """
         try:
             with transaction.atomic():
-                empresa_payload = package_data.get('empresa', {})
-                jefe_payload = package_data.get('jefe', {})
-                talento_payload = package_data.get('talentoHumano', {})
-                solicitud_payload = package_data.get('solicitud', {})
+                # Accept both Spanish keys (legacy) and English keys (new serializer)
+                empresa_payload = package_data.get('empresa') or package_data.get('enterprise') or package_data.get('company') or {}
+                jefe_payload = package_data.get('jefe') or package_data.get('boss') or {}
+                talento_payload = package_data.get('talentoHumano') or package_data.get('human_talent') or {}
+                solicitud_payload = package_data.get('solicitud') or package_data.get('request') or {}
 
                 # --- Empresa ---
                 enterprise = None
@@ -326,8 +327,8 @@ class RequestAsignationService(BaseService):
                     enterprise = Enterprise.objects.get(pk=empresa_payload.get('id'))
                 else:
                     name = empresa_payload.get('nombre') or empresa_payload.get('name')
-                    nit = empresa_payload.get('nit') or empresa_payload.get('nit_enterprise')
-                    locate = empresa_payload.get('direccion') or empresa_payload.get('locate')
+                    nit = empresa_payload.get('nit') or empresa_payload.get('tax_id') or empresa_payload.get('nit_enterprise')
+                    locate = empresa_payload.get('direccion') or empresa_payload.get('locate') or empresa_payload.get('address')
                     email = empresa_payload.get('correo') or empresa_payload.get('email') or empresa_payload.get('enterprise_email')
                     enterprise = Enterprise.objects.create(
                         name_enterprise=name or '',
@@ -343,10 +344,10 @@ class RequestAsignationService(BaseService):
                 else:
                     boss = Boss.objects.create(
                         enterprise=enterprise,
-                        name_boss=jefe_payload.get('nombre') or '',
-                        phone_number=jefe_payload.get('telefono') or 0,
-                        email_boss=jefe_payload.get('correo') or '',
-                        position=jefe_payload.get('cargo') or ''
+                        name_boss=jefe_payload.get('nombre') or jefe_payload.get('name') or '',
+                        phone_number=jefe_payload.get('telefono') or jefe_payload.get('phone') or 0,
+                        email_boss=jefe_payload.get('correo') or jefe_payload.get('email') or '',
+                        position=jefe_payload.get('cargo') or jefe_payload.get('position') or ''
                     )
 
                 # --- Talento Humano --- (OneToOne en el modelo)
@@ -360,19 +361,20 @@ class RequestAsignationService(BaseService):
                     else:
                         human_talent = HumanTalent.objects.create(
                             enterprise=enterprise,
-                            name=talento_payload.get('nombre') or '',
-                            email=talento_payload.get('correo') or '',
-                            phone_number=talento_payload.get('telefono') or 0
+                            name=talento_payload.get('nombre') or talento_payload.get('name') or '',
+                            email=talento_payload.get('correo') or talento_payload.get('email') or '',
+                            phone_number=talento_payload.get('telefono') or talento_payload.get('phone') or 0
                         )
 
                 # --- Solicitud ---
                 # Requiere apprentice y ficha en contextos anteriores; leer campos de fechas, sede y modalidad
-                apprentice_id = solicitud_payload.get('apprentice')
-                ficha_id = solicitud_payload.get('ficha')
-                fecha_inicio = solicitud_payload.get('fecha_inicio_contrato')
-                fecha_fin = solicitud_payload.get('fecha_fin_contrato')
-                sede_id = solicitud_payload.get('sede')
-                modality_id = solicitud_payload.get('modality_productive_stage')
+                # Map fields from Spanish and English payloads
+                apprentice_id = solicitud_payload.get('apprentice') or solicitud_payload.get('aprendiz')
+                ficha_id = solicitud_payload.get('ficha') or solicitud_payload.get('cohort')
+                fecha_inicio = solicitud_payload.get('fecha_inicio_contrato') or solicitud_payload.get('contract_start_date')
+                fecha_fin = solicitud_payload.get('fecha_fin_contrato') or solicitud_payload.get('contract_end_date')
+                sede_id = solicitud_payload.get('sede') or solicitud_payload.get('site')
+                modality_id = solicitud_payload.get('modality_productive_stage') or solicitud_payload.get('modality')
 
                 if not apprentice_id:
                     return self.error_response('El campo solicitud.apprentice es requerido', 'missing_apprentice')

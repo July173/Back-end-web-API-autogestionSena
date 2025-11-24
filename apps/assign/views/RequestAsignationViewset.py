@@ -101,21 +101,21 @@ class RequestAsignationViewset(BaseViewSet):
    
     #--- Create Form Request -------
     @swagger_auto_schema(
-        operation_description="Crear una nueva solicitud de formulario (sin PDF) — paquete completo (empresa, jefe, talentoHumano, solicitud)",
+        operation_description="Create a new form request (no PDF) — full package (company, boss, human_talent, request)",
         tags=["FormRequest"],
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'empresa': openapi.Schema(type=openapi.TYPE_OBJECT),
-                'jefe': openapi.Schema(type=openapi.TYPE_OBJECT),
-                'talentoHumano': openapi.Schema(type=openapi.TYPE_OBJECT),
-                'solicitud': openapi.Schema(type=openapi.TYPE_OBJECT),
+                'enterprise': openapi.Schema(type=openapi.TYPE_OBJECT),
+                'boss': openapi.Schema(type=openapi.TYPE_OBJECT),
+                'human_talent': openapi.Schema(type=openapi.TYPE_OBJECT),
+                'request': openapi.Schema(type=openapi.TYPE_OBJECT),
             },
             example={
-                "empresa": {"id": None, "nombre": "Nueva empresa SAS", "nit": "123456789", "direccion": "Calle 10", "correo": "empresa@example.com", "telefono": "12345"},
-                "jefe": {"id": None, "nombre": "Juan Perez", "correo": "juan@empresa.com", "telefono": "1111"},
-                "talentoHumano": {"id": None, "nombre": "Ana Rojas", "correo": "ana@empresa.com", "telefono": "2222"},
-                "solicitud": {"apprentice": 1, "ficha": 1, "descripcion": "Necesitamos un aprendizaje", "fecha_inicio_contrato": "2025-11-23", "fecha_fin_contrato": "2026-05-23", "sede": 1, "modality_productive_stage": 1}
+                "enterprise": {"id": None, "name": "New Company LLC", "tax_id": "123456789", "address": "Street 10", "email": "company@example.com", "phone": "12345"},
+                "boss": {"id": None, "name": "John Doe", "email": "john@company.com", "phone": "1111"},
+                "human_talent": {"id": None, "name": "Anna Smith", "email": "anna@company.com", "phone": "2222"},
+                "request": {"apprentice": 1, "ficha": 1, "contract_start_date": "2025-11-23", "contract_end_date": "2026-05-23", "sede": 1, "modality_productive_stage": 1}
             }
         ),
         responses={
