@@ -159,3 +159,6 @@ class AsignationInstructorService(BaseService):
             return format_response("La solicitud de asignación no existe.", success=False, type="not_found", status_code=404)
         except Exception as e:
             return format_response(f"Error al crear la asignación: {e}", success=False, type="create_custom", status_code=400)
+
+    def get_with_apprentice_instructor(self):
+        return self.repository.model.objects.select_related('instructor', 'request_asignation__apprentice').all()

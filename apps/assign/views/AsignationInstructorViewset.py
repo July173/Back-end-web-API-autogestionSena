@@ -3,12 +3,15 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from apps.general.entity.serializers.CreateAprendiz.ApprenticeSerializer import ApprenticeSerializer
 from core.base.view.implements.BaseViewset import BaseViewSet
 from apps.assign.services.AsignationInstructorService import AsignationInstructorService
 from apps.assign.entity.serializers.AsignationInstructor.AsignationInstructorSerializer import AsignationInstructorSerializer
 from apps.assign.entity.serializers.AsignationInstructor.AsignationInstructorAllDatesSerializer import AsignationInstructorSerializer as AsignationInstructorAllDatesSerializer
+from apps.assign.entity.serializers.AsignationInstructor.AsignationInstructorWithNamesSerializer import AsignationInstructorWithNamesSerializer, PersonBasicSerializer
 from apps.general.entity.models import Instructor
 from apps.general.entity.serializers.CreateInstructor.InstructorSerializer import InstructorSerializer
+from apps.security.entity.models import Person
 
 class AsignationInstructorViewset(BaseViewSet):
     service_class = AsignationInstructorService
@@ -118,4 +121,53 @@ class AsignationInstructorViewset(BaseViewSet):
             'asignation': serializer.data,
             'instructor': instructor_data
         }, status=status.HTTP_201_CREATED)
-    
+
+    #-- Get with Apprentice and Instructor Data --
+    @swagger_auto_schema(
+        method='get',
+        operation_description="Obtiene el id, datos de aprendiz y de instructor para una asignación específica.",
+        manual_parameters=[
+            openapi.Parameter('id', openapi.IN_QUERY, description="ID de la asignación", type=openapi.TYPE_INTEGER, required=True)
+        ],
+        responses={200: openapi.Response("OK")},
+        tags=["AsignationInstructor"]
+    )
+    @action(detail=False, methods=['get'], url_path='with-apprentice-instructor')
+    def with_apprentice_instructor(self, request):
+        asignation_id = request.query_params.get('id')
+        if not asignation_id:
+            return Response({'detail': 'El parámetro id es requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            asignation = self.service_class().get_with_apprentice_instructor().get(id=asignation_id)
+        except self.service_class().repository.model.DoesNotExist:
+            return Response({'detail': 'No se encontró la asignación.'}, status=status.HTTP_404_NOT_FOUND)
+        apprentice = asignation.request_asignation.apprentice
+        instructor = asignation.instructor
+        data = {
+            'asignation_id': asignation.id,
+            'apprentice': {
+                'id': apprentice.id,
+                'first_name': apprentice.person.first_name,
+                'second_name': apprentice.person.second_name,
+                'first_last_name': apprentice.person.first_last_name,
+                'second_last_name': apprentice.person.second_last_name,
+                'number_identification': apprentice.person.number_identification,
+                'phone_number': apprentice.person.phone_number,
+                'type_identification': getattr(apprentice.person.type_identification, 'name', None),
+                'active': apprentice.active
+            },
+            'instructor': {
+                'id': instructor.id,
+                'first_name': instructor.person.first_name,
+                'second_name': instructor.person.second_name,
+                'first_last_name': instructor.person.first_last_name,
+                'second_last_name': instructor.person.second_last_name,
+                'number_identification': instructor.person.number_identification,
+                'phone_number': instructor.person.phone_number,
+                'type_identification': getattr(instructor.person.type_identification, 'name', None),
+                'active': instructor.active
+            }
+        }
+        serializer = AsignationInstructorWithNamesSerializer(data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
