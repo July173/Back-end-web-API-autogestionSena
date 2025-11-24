@@ -18,6 +18,7 @@ class AsignationInstructorWithMessageSerializer(serializers.ModelSerializer):
     numero_identificacion = serializers.SerializerMethodField(read_only=True)
     fecha_solicitud = serializers.SerializerMethodField(read_only=True)
     estado_solicitud = serializers.SerializerMethodField(read_only=True)
+    modalidad = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = AsignationInstructor
@@ -32,6 +33,7 @@ class AsignationInstructorWithMessageSerializer(serializers.ModelSerializer):
             'numero_identificacion',
             'fecha_solicitud',
             'estado_solicitud',
+            'modalidad',
             'messages',
         ]
     def get_messages(self, obj):
@@ -73,6 +75,13 @@ class AsignationInstructorWithMessageSerializer(serializers.ModelSerializer):
         try:
             person = obj.request_asignation.apprentice.person
             return person.number_identification
+        except Exception:
+            return None
+
+    def get_modalidad(self, obj):
+        try:
+            mod = obj.request_asignation.modality_productive_stage
+            return getattr(mod, 'name_modality', None) if mod else None
         except Exception:
             return None
 

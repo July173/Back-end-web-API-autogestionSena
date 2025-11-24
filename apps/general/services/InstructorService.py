@@ -10,18 +10,14 @@ from apps.security.entity.models import User, Person
 from apps.general.entity.models import Instructor
 from core.utils.Validation import is_unique_email, validate_document_number, validate_phone_number, format_response
 from core.utils.Validation import is_sena_email
-from django.contrib.auth.hashers import make_password
 from apps.security.emails.CreacionCuentaUsers import send_account_created_email
 from django.utils.crypto import get_random_string
+from apps.assign.entity.models import AsignationInstructor
 
 
 
 class InstructorService(BaseService):
     def get_asignations(self, instructor_id):
-        """
-        Retorna todas las asignaciones (AsignationInstructor) de un instructor específico.
-        """
-        from apps.assign.entity.models import AsignationInstructor
         return AsignationInstructor.objects.filter(instructor_id=instructor_id)
 
     def update_learners_fields(self, instructor_id, assigned_learners=None, max_assigned_learners=None):
