@@ -422,8 +422,13 @@ class RequestAsignationService(BaseService):
                     human_talent = HumanTalent.objects.get(pk=talento_payload.get('id'))
                 else:
                     # Si ya existe un human_talent en la empresa, reutilizarlo
-                    if hasattr(enterprise, 'human_talent') and enterprise.human_talent:
-                        human_talent = enterprise.human_talent
+                    if hasattr(enterprise, 'human_talent'):
+                        ht = enterprise.human_talent
+                        # Si es RelatedManager (por related_name), usar first()
+                        if hasattr(ht, 'all'):
+                            human_talent = ht.first()
+                        else:
+                            human_talent = ht
                     else:
                         human_talent = HumanTalent.objects.create(
                             enterprise=enterprise,
@@ -510,8 +515,8 @@ class RequestAsignationService(BaseService):
                     'message': 'Solicitud creada exitosamente',
                     'data': {
                         'enterprise': {'id': enterprise.id},
-                        'boss': {'id': boss.id},
-                        'human_talent': {'id': human_talent.id},
+                        'boss': {'id': boss.id if boss else None},
+                        'human_talent': {'id': human_talent.id if human_talent else None},
                         'request_asignation': {'id': request_asignation.id}
                     }
                 }
