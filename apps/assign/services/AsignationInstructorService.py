@@ -10,6 +10,8 @@ from apps.security.emails.AsignacionInstructor import send_assignment_to_instruc
 from core.utils.Validation import format_response
 from django.db import IntegrityError
 from apps.assign.entity.models.Message import Message
+from apps.assign.entity.models import VisitFollowing
+from dateutil.relativedelta import relativedelta
 
 class AsignationInstructorService(BaseService):
     def __init__(self):
@@ -108,6 +110,45 @@ class AsignationInstructorService(BaseService):
                     f"{person.first_name} {person.first_last_name}",
                     f"{instructor.person.first_name} {instructor.person.first_last_name}"
                 )
+            # Crear visitas automáticas si el estado es 'ASIGNADO'
+            if request_asignation.request_state == RequestState.ASIGNADO:
+                
+                import math
+                modality = request_asignation.modality_productive_stage
+                start_date = request_asignation.date_start_production_stage
+                end_date = request_asignation.date_end_production_stage
+                visitas = []
+                if modality and start_date:
+                    if modality.name_modality.strip().upper().replace(' ', '_') == 'CONTRATO_APRENDIZAJE':
+                        fechas = [
+                            (1, 'Concertación', start_date + relativedelta(months=1)),
+                            (2, 'Visita parcial', start_date + relativedelta(months=3)),
+                            (3, 'Visita final', start_date + relativedelta(months=6)),
+                        ]
+                    elif start_date and end_date:
+                        total_days = (end_date - start_date).days
+                        if total_days < 1:
+                            total_days = 1
+                        periodo = total_days / 3
+                        fechas = []
+                        for i, nombre in enumerate(['Concertación', 'Visita parcial', 'Visita final'], start=1):
+                            fecha = start_date + relativedelta(days=round(periodo * (i-1)))
+                            fechas.append((i, nombre, fecha))
+                    else:
+                        fechas = []
+                    for num, nombre, fecha in fechas:
+                        visitas.append(VisitFollowing(
+                            asignation_instructor=asignation,
+                            visit_number=num,
+                            name_visit=nombre,
+                            scheduled_date=fecha,
+                            state_visit='por hacer',
+                            observations=None,
+                            date_visit_made=None,
+                            observation_state_visit=None,
+                            pdf_report=None
+                        ))
+                    VisitFollowing.objects.bulk_create(visitas)
             return asignation
         except IntegrityError as ie:
             # Manejo de condición de carrera: si otra petición creó la asignación simultáneamente
