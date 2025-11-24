@@ -12,8 +12,10 @@ from apps.assign.entity.models import RequestAsignation
 from apps.general.entity.models import PersonSede
 from dateutil.relativedelta import relativedelta
 from apps.assign.entity.models import AsignationInstructor
+from django.utils.dateparse import parse_date
 from apps.assign.entity.models import Enterprise, Boss, HumanTalent
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 
 logger = logging.getLogger(__name__)
@@ -320,7 +322,7 @@ class RequestAsignationService(BaseService):
             req = RequestAsignation.objects.get(pk=request_id)
 
             # Parse date strings if provided
-            from django.utils.dateparse import parse_date
+            
             if isinstance(fecha_inicio, str):
                 fecha_inicio_parsed = parse_date(fecha_inicio)
             else:
@@ -380,15 +382,54 @@ class RequestAsignationService(BaseService):
         Crea o usa entidades según 'id' y crea la solicitud en una transacción.
         """
         try:
-            with transaction.atomic():
-                # Accept both Spanish keys (legacy) and English keys (new serializer)
-                empresa_payload = package_data.get('empresa') or package_data.get('enterprise') or package_data.get('company') or {}
-                jefe_payload = package_data.get('jefe') or package_data.get('boss') or {}
-                talento_payload = package_data.get('talentoHumano') or package_data.get('human_talent') or {}
-                solicitud_payload = package_data.get('solicitud') or package_data.get('request') or {}
+            # --- Extraer y validar datos antes de crear cualquier objeto ---
+            empresa_payload = package_data.get('empresa') or package_data.get('enterprise') or package_data.get('company') or {}
+            jefe_payload = package_data.get('jefe') or package_data.get('boss') or {}
+            talento_payload = package_data.get('talentoHumano') or package_data.get('human_talent') or {}
+            solicitud_payload = package_data.get('solicitud') or package_data.get('request') or {}
 
-                # --- Empresa ---
-                enterprise = None
+            # Map fields from Spanish and English payloads
+            apprentice_id = solicitud_payload.get('apprentice') or solicitud_payload.get('aprendiz')
+            ficha_id = solicitud_payload.get('ficha') or solicitud_payload.get('cohort')
+            fecha_inicio = solicitud_payload.get('fecha_inicio_contrato') or solicitud_payload.get('contract_start_date')
+            fecha_fin = solicitud_payload.get('fecha_fin_contrato') or solicitud_payload.get('contract_end_date')
+            sede_id = solicitud_payload.get('sede') or solicitud_payload.get('site')
+            modality_id = solicitud_payload.get('modality_productive_stage') or solicitud_payload.get('modality')
+
+            if not apprentice_id:
+                return self.error_response('El campo solicitud.apprentice es requerido', 'missing_apprentice')
+
+            # Validar existencia de entidades relacionadas antes de crear nada
+            apprentice = Apprentice.objects.get(pk=apprentice_id)
+
+            ficha = None
+            if ficha_id:
+                ficha = Ficha.objects.get(pk=ficha_id)
+
+            sede = None
+            if sede_id is not None:
+                sede = Sede.objects.get(pk=sede_id)
+
+            modality = None
+            if modality_id:
+                modality = ModalityProductiveStage.objects.get(pk=modality_id)
+
+            # Validar modalidad y duración
+            duracion_meses = 6
+            if fecha_inicio and fecha_fin:
+                diferencia = relativedelta(fecha_fin, fecha_inicio)
+                duracion_meses = diferencia.years * 12 + diferencia.months
+                if duracion_meses < 0:
+                    return self.error_response("La fecha de fin debe ser posterior a la de inicio.", "invalid_dates")
+
+            try:
+                self._validar_solicitud(apprentice_id, ficha_id, modality_id, duracion_meses)
+            except Exception as e:
+                return self.error_response(str(e), 'validation')
+
+            # --- Si todo es válido, crear objetos dentro de la transacción ---
+            with transaction.atomic():
+                # Empresa
                 if empresa_payload.get('id'):
                     enterprise = Enterprise.objects.get(pk=empresa_payload.get('id'))
                 else:
@@ -403,8 +444,7 @@ class RequestAsignationService(BaseService):
                         email_enterprise=email or ''
                     )
 
-                # --- Jefe (Boss) ---
-                boss = None
+                # Boss
                 if jefe_payload.get('id'):
                     boss = Boss.objects.get(pk=jefe_payload.get('id'))
                 else:
@@ -416,73 +456,22 @@ class RequestAsignationService(BaseService):
                         position=jefe_payload.get('cargo') or jefe_payload.get('position') or ''
                     )
 
-                # --- Talento Humano --- (OneToOne en el modelo)
-                human_talent = None
+                # Human Talent
                 if talento_payload.get('id'):
                     human_talent = HumanTalent.objects.get(pk=talento_payload.get('id'))
                 else:
-                    # Si ya existe un human_talent en la empresa, reutilizarlo
-                    if hasattr(enterprise, 'human_talent'):
-                        ht = enterprise.human_talent
-                        # Si es RelatedManager (por related_name), usar first()
-                        if hasattr(ht, 'all'):
-                            human_talent = ht.first()
-                        else:
-                            human_talent = ht
-                    else:
-                        human_talent = HumanTalent.objects.create(
-                            enterprise=enterprise,
-                            name=talento_payload.get('nombre') or talento_payload.get('name') or '',
-                            email=talento_payload.get('correo') or talento_payload.get('email') or '',
-                            phone_number=talento_payload.get('telefono') or talento_payload.get('phone') or 0
-                        )
+                    human_talent = HumanTalent.objects.create(
+                        enterprise=enterprise,
+                        name=talento_payload.get('nombre') or talento_payload.get('name') or '',
+                        email=talento_payload.get('correo') or talento_payload.get('email') or '',
+                        phone_number=talento_payload.get('telefono') or talento_payload.get('phone') or 0
+                    )
 
-
-                # --- Solicitud ---
-                # Requiere apprentice y ficha en contextos anteriores; leer campos de fechas, sede y modalidad
-                # Map fields from Spanish and English payloads
-                apprentice_id = solicitud_payload.get('apprentice') or solicitud_payload.get('aprendiz')
-                ficha_id = solicitud_payload.get('ficha') or solicitud_payload.get('cohort')
-                fecha_inicio = solicitud_payload.get('fecha_inicio_contrato') or solicitud_payload.get('contract_start_date')
-                fecha_fin = solicitud_payload.get('fecha_fin_contrato') or solicitud_payload.get('contract_end_date')
-                sede_id = solicitud_payload.get('sede') or solicitud_payload.get('site')
-                modality_id = solicitud_payload.get('modality_productive_stage') or solicitud_payload.get('modality')
-
-                if not apprentice_id:
-                    return self.error_response('El campo solicitud.apprentice es requerido', 'missing_apprentice')
-
-                apprentice = Apprentice.objects.get(pk=apprentice_id)
-
-                # Validar modalidad y duración
-                duracion_meses = 6
-                if fecha_inicio and fecha_fin:
-                    diferencia = relativedelta(fecha_fin, fecha_inicio)
-                    duracion_meses = diferencia.years * 12 + diferencia.months
-                    if duracion_meses < 0:
-                        return self.error_response("La fecha de fin debe ser posterior a la de inicio.", "invalid_dates")
-
-                try:
-                    self._validar_solicitud(apprentice_id, ficha_id, modality_id, duracion_meses)
-                except Exception as e:
-                    return self.error_response(str(e), 'validation')
-
-                ficha = None
+                # Actualizar ficha del aprendiz si corresponde
                 if ficha_id:
-                    ficha = Ficha.objects.get(pk=ficha_id)
                     apprentice.ficha = ficha
                     apprentice.save()
 
-                # Validar sede si se envía
-                sede = None
-                if sede_id is not None:
-                    sede = Sede.objects.get(pk=sede_id)
-
-                # Validar modalidad
-                modality = None
-                if modality_id:
-                    modality = ModalityProductiveStage.objects.get(pk=modality_id)
-
-                from django.utils import timezone
                 request_date_value = fecha_inicio if fecha_inicio else timezone.now().date()
 
                 # Determinar fecha de fin por defecto (6 meses desde la fecha de inicio o request_date)
