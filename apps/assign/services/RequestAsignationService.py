@@ -485,6 +485,8 @@ class RequestAsignationService(BaseService):
                     apprentice=apprentice,
                     enterprise=enterprise,
                     modality_productive_stage=modality if modality else ModalityProductiveStage.objects.first(),
+                    human_talent=human_talent,
+                    boss=boss,
                     request_date=request_date_value,
                     date_start_production_stage=fecha_inicio if fecha_inicio else request_date_value,
                     date_end_production_stage=fecha_fin_value,
