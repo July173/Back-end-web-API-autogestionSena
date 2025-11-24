@@ -58,37 +58,32 @@ class RequestAsignationRepository(BaseRepository):
     
     def get_form_request_by_id(self, request_id):
         """
-        Obtener una solicitud de formulario por su ID con todas sus relaciones.
+        Obtener una solicitud de formulario por su ID con todas sus relaciones (usando las nuevas foráneas directas).
         """
         try:
-            # Note: 'boss' is a reverse FK (Enterprise -> Boss is 1:N via Boss.enterprise)
             request_asignation = RequestAsignation.objects.select_related(
                 'apprentice__person',
                 'apprentice__ficha',
                 'enterprise',
-                'enterprise__human_talent',
-                'modality_productive_stage'
+                'modality_productive_stage',
+                'boss',
+                'human_talent'
             ).get(pk=request_id)
-            # Verificar que exista al menos un boss y el human_talent asociado
-            has_boss = request_asignation.enterprise.bosses.exists() if request_asignation.enterprise else False
-            has_human_talent = hasattr(request_asignation.enterprise, 'human_talent') and request_asignation.enterprise.human_talent
-            if has_boss and has_human_talent:
+            # Verificar que tenga boss y human_talent asociados directamente
+            if request_asignation.boss and request_asignation.human_talent:
                 modality = request_asignation.modality_productive_stage
                 regional = getattr(modality, 'regional', None)
                 center = getattr(modality, 'center', None)
                 sede = getattr(modality, 'sede', None)
-                # Obtener la sede a través de PersonSede
                 person = request_asignation.apprentice.person
                 person_sede = PersonSede.objects.filter(person=person).first()
                 sede = person_sede.sede if person_sede and person_sede.sede else sede
-                # Obtener el primer boss asociado (si hay varios, se toma el primero)
-                first_boss = request_asignation.enterprise.bosses.first()
                 return (
                     person,
                     request_asignation.apprentice,
                     request_asignation.enterprise,
-                    first_boss,
-                    request_asignation.enterprise.human_talent,
+                    request_asignation.boss,
+                    request_asignation.human_talent,
                     modality,
                     request_asignation,
                     regional,
@@ -199,40 +194,33 @@ class RequestAsignationRepository(BaseRepository):
         logger.info("Obteniendo todas las solicitudes de formulario")
 
         # Obtener todas las RequestAsignation con sus relaciones optimizadas
-        # Nota: Boss es ahora reverse FK (Enterprise.bosses), por lo que no se puede select_related
         request_asignations = RequestAsignation.objects.select_related(
             'apprentice__person',           # Person a través de Apprentice
             'apprentice__ficha',            # Ficha del aprendiz
             'enterprise',                   # Enterprise
-            'enterprise__human_talent',     # HumanTalent (OneToOne)
-            'modality_productive_stage'     # ModalityProductiveStage
+            'modality_productive_stage',    # ModalityProductiveStage
+            'boss',                         # Boss directo
+            'human_talent'                  # HumanTalent directo
         ).all()
 
-        # Lista para almacenar las solicitudes encontradas
         form_requests = []
 
         for request_asignation in request_asignations:
-            # Verificar que tenga al menos un boss y human_talent
-            has_boss = request_asignation.enterprise.bosses.exists() if request_asignation.enterprise else False
-            has_human_talent = hasattr(request_asignation.enterprise, 'human_talent') and request_asignation.enterprise.human_talent
-            if has_boss and has_human_talent:
+            # Verificar que tenga boss y human_talent asociados directamente
+            if request_asignation.boss and request_asignation.human_talent:
                 modality = request_asignation.modality_productive_stage
                 regional = getattr(modality, 'regional', None)
                 center = getattr(modality, 'center', None)
                 sede = getattr(modality, 'sede', None)
-                # Crear tupla con las entidades relacionadas
-                # Obtener la sede a través de PersonSede
                 person = request_asignation.apprentice.person
-                # Ajustar aquí también el filtro de PersonSede:
                 person_sede = PersonSede.objects.filter(person=person).first()
                 sede = person_sede.sede if person_sede and person_sede.sede else None
-                first_boss = request_asignation.enterprise.bosses.first()
                 form_request = (
                     person,
                     request_asignation.apprentice,
                     request_asignation.enterprise,
-                    first_boss,
-                    request_asignation.enterprise.human_talent,
+                    request_asignation.boss,
+                    request_asignation.human_talent,
                     sede,
                     modality,
                     request_asignation

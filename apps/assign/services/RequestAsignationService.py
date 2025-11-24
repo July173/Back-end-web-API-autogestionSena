@@ -88,13 +88,13 @@ class RequestAsignationService(BaseService):
                 'enterprise_nit': enterprise.nit_enterprise,
                 'enterprise_location': enterprise.locate,
                 'enterprise_email': enterprise.email_enterprise,
-                'boss_name': boss.name_boss,
-                'boss_phone': boss.phone_number,
-                'boss_email': boss.email_boss,
-                'boss_position': boss.position,
-                'human_talent_name': human_talent.name,
-                'human_talent_email': human_talent.email,
-                'human_talent_phone': human_talent.phone_number,
+                'boss_name': boss.name_boss if boss else None,
+                'boss_phone': boss.phone_number if boss else None,
+                'boss_email': boss.email_boss if boss else None,
+                'boss_position': boss.position if boss else None,
+                'human_talent_name': human_talent.name if human_talent else None,
+                'human_talent_email': human_talent.email if human_talent else None,
+                'human_talent_phone': human_talent.phone_number if human_talent else None,
                 'regional': regional.id if regional else None,
                 'center': center.id if center else None,
                 'sede': sede.id if sede else None,
@@ -178,7 +178,9 @@ class RequestAsignationService(BaseService):
                     'numero_identificacion': getattr(person, 'number_identification', None),
                     'fecha_solicitud': request_asignation.request_date,
                     'request_state': request_asignation.request_state,
-                    'nombre_modalidad': getattr(modality, 'name_modality', None) if modality else None
+                    'nombre_modalidad': getattr(modality, 'name_modality', None) if modality else None,
+                    'boss': boss.name_boss if boss else None,
+                    'human_talent': human_talent.name if human_talent else None
                 }
                 requests_data.append(request_item)
             logger.info(f"Se encontraron {len(requests_data)} solicitudes")
