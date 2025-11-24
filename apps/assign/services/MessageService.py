@@ -49,12 +49,4 @@ class MessageService:
         message = self.repository.create(request_asignation, content, type_message)
         return message
 
-    def update_request_state(self, message_id, request_state):
-            msg = self.repository.update_request_state(message_id, request_state)
-            if not msg:
-                return {
-                    "status": "error",
-                    "type": "not_found",
-                    "detail": f"No existe un mensaje con id {message_id}."
-                }
-            return msg
+    # Note: update_request_state removed — message/request state updates are handled elsewhere

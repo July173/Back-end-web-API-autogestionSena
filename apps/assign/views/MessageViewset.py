@@ -1,8 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
-from apps.assign.entity.serializers.Message.MessageAsignationSerializer import MessageAsignationSerializer
-from apps.assign.entity.serializers.Message.MessageSerializer import MessageSerializer
+from apps.assign.entity.serializers.MessageSerializer import MessageSerializer
 from apps.assign.services.MessageService import MessageService
 
 class MessageViewset(viewsets.ViewSet):
@@ -13,18 +12,18 @@ class MessageViewset(viewsets.ViewSet):
     #-- List --
     @swagger_auto_schema(
         operation_description="Obtiene una lista de todos los mensajes.",
-        responses={200: MessageAsignationSerializer(many=True)},
+        responses={200: MessageSerializer(many=True)},
         tags=["Message"]
     )
     def list(self, request):
         queryset = MessageService().get()
-        serializer = MessageAsignationSerializer(queryset, many=True)
+        serializer = MessageSerializer(queryset, many=True)
         return Response(serializer.data)
 
     #-- Retrieve by ID --
     @swagger_auto_schema(
         operation_description="Obtiene el detalle de un mensaje por id.",
-        responses={200: MessageAsignationSerializer()},
+        responses={200: MessageSerializer()},
         tags=["Message"]
     )
     def retrieve(self, request, pk=None):
@@ -32,14 +31,14 @@ class MessageViewset(viewsets.ViewSet):
         if isinstance(result, dict) and result.get('status') == 'error':
             # Only show the error message (detail)
             return Response(result.get('detail', 'Error'), status=status.HTTP_404_NOT_FOUND)
-        serializer = MessageAsignationSerializer(result)
+        serializer = MessageSerializer(result)
         return Response(serializer.data)
 
     #-- Create --
     @swagger_auto_schema(
         operation_description="Crea un nuevo mensaje.",
         request_body=MessageSerializer,
-        responses={201: MessageAsignationSerializer()},
+        responses={201: MessageSerializer()},
         tags=["Message"]
     )
     def create(self, request):
@@ -48,24 +47,7 @@ class MessageViewset(viewsets.ViewSet):
         result = MessageService().create(serializer.validated_data)
         if isinstance(result, dict) and result.get('status') == 'error':
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
-        out = MessageAsignationSerializer(result)
+        out = MessageSerializer(result)
         return Response(out.data, status=status.HTTP_201_CREATED)
     
-    #-- Partial Update (Update Request State) --
-    @swagger_auto_schema(
-            operation_description="Actualiza solo el estado de la solicitud (request_state) del mensaje.",
-            request_body=MessageAsignationSerializer,
-            responses={200: MessageAsignationSerializer()},
-            tags=["Message"]
-        )
-    def partial_update(self, request, pk=None):
-        serializer = MessageAsignationSerializer(data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        request_state = serializer.validated_data.get('request_state', None)
-        if not request_state:
-            return Response({"detail": "Debe enviar el campo request_state."}, status=status.HTTP_400_BAD_REQUEST)
-        result = MessageService().update_request_state(pk, request_state)
-        if isinstance(result, dict) and result.get('status') == 'error':
-            return Response(result, status=status.HTTP_404_NOT_FOUND)
-        out = MessageAsignationSerializer(result)
-        return Response(out.data, status=status.HTTP_200_OK)
+    # (PATCH/partial_update removed by request)
