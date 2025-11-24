@@ -30,12 +30,12 @@ class AsignationInstructorHistoryViewset(ViewSet):
     def reasignar_instructor(self, request):
         serializer = ReasignationInstructorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        asignation_instructor_id = serializer.validated_data['asignation_instructor_id']
+        asignation_instructor = serializer.validated_data['asignation_instructor']
         new_instructor_id = serializer.validated_data['new_instructor_id']
         message = serializer.validated_data['message']
         service = self.get_service()
         result = service.reasignar_instructor(
-            asignation_instructor_id,
+            asignation_instructor,
             new_instructor_id,
             message
         )
@@ -47,7 +47,7 @@ class AsignationInstructorHistoryViewset(ViewSet):
     @swagger_auto_schema(
         operation_description="Obtiene el historial de reasignaciones para una asignación.",
         manual_parameters=[
-            openapi.Parameter('asignation_instructor_id', openapi.IN_QUERY, description="ID de la asignación", type=openapi.TYPE_INTEGER)
+            openapi.Parameter('asignation_instructor', openapi.IN_QUERY, description="ID de la asignación", type=openapi.TYPE_INTEGER)
         ],
         tags=["AsignationInstructorHistory"],
         responses={
@@ -57,9 +57,9 @@ class AsignationInstructorHistoryViewset(ViewSet):
     )
     @action(detail=False, methods=['get'], url_path='list-history')
     def list_history(self, request):
-        asignation_instructor_id = request.query_params.get('asignation_instructor_id')
+        asignation_instructor = request.query_params.get('asignation_instructor')
         service = self.get_service()
-        history = service.list_by_asignation(asignation_instructor_id)
+        history = service.list_by_asignation(asignation_instructor)
         if isinstance(history, dict) and history.get('status') == 'error':
             return Response(history, status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(history, many=True)
