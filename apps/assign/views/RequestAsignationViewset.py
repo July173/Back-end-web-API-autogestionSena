@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from drf_yasg.utils import swagger_auto_schema
+from apps.assign.entity.serializers.form.ChangeInAsignationSerializer import ChangeInAsignationSerializer
 from drf_yasg import openapi
 from core.base.view.implements.BaseViewset import BaseViewSet
 from apps.assign.services.RequestAsignationService import RequestAsignationService
@@ -142,6 +143,27 @@ class RequestAsignationViewset(BaseViewSet):
             }, status=status.HTTP_201_CREATED)
         else:
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
+
+    #--- Update Form Request (state and dates) -------
+    @swagger_auto_schema(
+        operation_description="Actualiza el estado, fechas y mensaje de una solicitud de formulario.",
+        tags=["FormRequest"],
+        request_body=ChangeInAsignationSerializer,
+        responses={200: openapi.Response(description="Solicitud actualizada correctamente")}
+    )
+    @action(detail=True, methods=['patch'], url_path='form-request-update')
+    def update_form_request(self, request, pk=None):
+        request_state = request.data.get('request_state')
+        fecha_inicio = request.data.get('fecha_inicio_contrato') or request.data.get('contract_start_date')
+        fecha_fin = request.data.get('fecha_fin_contrato') or request.data.get('contract_end_date')
+
+        result = self.service_class().update_request_state(pk, request_state, fecha_inicio, fecha_fin)
+        if result.get('success'):
+            return Response(result, status=status.HTTP_200_OK)
+        # Map not_found to 404, validation errors to 400 otherwise 500
+        if result.get('error_type') == 'not_found':
+            return Response(result, status=status.HTTP_404_NOT_FOUND)
+        return Response(result, status=status.HTTP_400_BAD_REQUEST)
 
     #--- List Form Requests -------
     @swagger_auto_schema(

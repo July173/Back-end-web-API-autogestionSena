@@ -13,11 +13,16 @@ from apps.general.entity.models import PersonSede
 from dateutil.relativedelta import relativedelta
 from apps.assign.entity.models import AsignationInstructor
 from apps.assign.entity.models import Enterprise, Boss, HumanTalent
+from django.core.exceptions import ValidationError
+
 
 logger = logging.getLogger(__name__)
 
 
 class RequestAsignationService(BaseService):
+
+    
+
     def __init__(self):
         self.repository = RequestAsignationRepository()
 
@@ -306,6 +311,67 @@ class RequestAsignationService(BaseService):
             return self.error_response(f"Error al filtrar solicitudes: {e}", "filter_form_requests")
 
 
+    def update_request_state(self, request_id, request_state=None, fecha_inicio=None, fecha_fin=None):
+        """
+        Update the request_asignation state and optionally the start/end dates.
+        Returns a dict with the same structure as other service methods.
+        """
+        try:
+            req = RequestAsignation.objects.get(pk=request_id)
+
+            # Parse date strings if provided
+            from django.utils.dateparse import parse_date
+            if isinstance(fecha_inicio, str):
+                fecha_inicio_parsed = parse_date(fecha_inicio)
+            else:
+                fecha_inicio_parsed = fecha_inicio
+
+            if isinstance(fecha_fin, str):
+                fecha_fin_parsed = parse_date(fecha_fin)
+            else:
+                fecha_fin_parsed = fecha_fin
+
+            # If both dates provided, validate ordering and minimal 6 months difference
+            if fecha_inicio_parsed and fecha_fin_parsed:
+                diferencia = relativedelta(fecha_fin_parsed, fecha_inicio_parsed)
+                meses = diferencia.years * 12 + diferencia.months
+                if meses < 6 or (meses == 6 and diferencia.days < 0):
+                    return self.error_response("La diferencia entre la fecha de inicio y fin de contrato debe ser de al menos 6 meses.", "invalid_dates")
+
+            # Apply updates
+            updated = False
+            if request_state is not None:
+                req.request_state = request_state
+                updated = True
+
+            if fecha_inicio_parsed is not None:
+                req.date_start_production_stage = fecha_inicio_parsed
+                updated = True
+
+            if fecha_fin_parsed is not None:
+                req.date_end_production_stage = fecha_fin_parsed
+                updated = True
+
+            if updated:
+                req.save()
+
+            return {
+                'success': True,
+                'message': 'Solicitud actualizada correctamente',
+                'data': {
+                    'id': req.id,
+                    'request_state': req.request_state,
+                    'date_start_production_stage': req.date_start_production_stage,
+                    'date_end_production_stage': getattr(req, 'date_end_production_stage', None)
+                }
+            }
+
+        except RequestAsignation.DoesNotExist:
+            return self.error_response('Solicitud no encontrada', 'not_found')
+        except Exception as e:
+            return self.error_response(f"Error al actualizar la solicitud: {e}", 'update_request_state')
+
+
     def create_complete_request_package(self, package_data):
         """Recibe un paquete con estructura:
         {
@@ -366,6 +432,7 @@ class RequestAsignationService(BaseService):
                             phone_number=talento_payload.get('telefono') or talento_payload.get('phone') or 0
                         )
 
+
                 # --- Solicitud ---
                 # Requiere apprentice y ficha en contextos anteriores; leer campos de fechas, sede y modalidad
                 # Map fields from Spanish and English payloads
@@ -381,10 +448,18 @@ class RequestAsignationService(BaseService):
 
                 apprentice = Apprentice.objects.get(pk=apprentice_id)
 
-                # Verificar estado de última solicitud
-                last_request = RequestAsignation.objects.filter(apprentice=apprentice).order_by('-id').first()
-                if last_request and last_request.request_state != RequestState.RECHAZADO:
-                    return self.error_response("Solo puedes volver a enviar el formulario si tu última solicitud fue rechazada.", "invalid_state")
+                # Validar modalidad y duración
+                duracion_meses = 6
+                if fecha_inicio and fecha_fin:
+                    diferencia = relativedelta(fecha_fin, fecha_inicio)
+                    duracion_meses = diferencia.years * 12 + diferencia.months
+                    if duracion_meses < 0:
+                        return self.error_response("La fecha de fin debe ser posterior a la de inicio.", "invalid_dates")
+
+                try:
+                    self._validar_solicitud(apprentice_id, ficha_id, modality_id, duracion_meses)
+                except Exception as e:
+                    return self.error_response(str(e), 'validation')
 
                 ficha = None
                 if ficha_id:
@@ -401,13 +476,6 @@ class RequestAsignationService(BaseService):
                 modality = None
                 if modality_id:
                     modality = ModalityProductiveStage.objects.get(pk=modality_id)
-
-                # Validar rango de fechas (si ambos provistos)
-                if fecha_inicio and fecha_fin:
-                    diferencia = relativedelta(fecha_fin, fecha_inicio)
-                    meses = diferencia.years * 12 + diferencia.months
-                    if meses < 6 or (meses == 6 and diferencia.days < 0):
-                        return self.error_response("La diferencia entre la fecha de inicio y fin de contrato debe ser de al menos 6 meses.", "invalid_dates")
 
                 from django.utils import timezone
                 request_date_value = fecha_inicio if fecha_inicio else timezone.now().date()
@@ -462,3 +530,44 @@ class RequestAsignationService(BaseService):
             return self.error_response('Modalidad no encontrada', 'not_found')
         except Exception as e:
             return self.error_response(f"Error al crear solicitud completa: {e}", 'create_complete_request')
+
+
+
+    def _validar_solicitud(self, aprendiz_id, ficha_id, modalidad_id, duracion_meses):
+        """
+        Valida las reglas de negocio para la creación de una solicitud de asignación.
+        Lanza ValidationError (o retorna error_response) si alguna regla no se cumple.
+        """
+        
+        solicitudes = RequestAsignation.objects.filter(apprentice_id=aprendiz_id)
+        # Estados que NO cuentan como activas
+        inactivos = ['RECHAZADA', 'FINALIZADA']
+        activas = solicitudes.exclude(request_state__in=inactivos)
+
+        # A. Máximo 2 solicitudes activas
+        if activas.count() >= 2:
+            raise ValidationError("Solo puedes tener máximo dos solicitudes activas.")
+
+        # B. Misma ficha
+        if ficha_id and activas.filter(apprentice__ficha_id=ficha_id).exists():
+            raise ValidationError("Ya tienes una solicitud activa con esta ficha.")
+
+        # C. Modalidad contrato
+        contrato_nombre = "CONTRATO_APRENDIZAJE"
+        modalidad_obj = ModalityProductiveStage.objects.get(pk=modalidad_id) if modalidad_id else None
+        if modalidad_obj and modalidad_obj.name_modality.upper().replace(' ', '_') == contrato_nombre:
+            if activas.filter(modality_productive_stage__name_modality__iexact=modalidad_obj.name_modality).exists():
+                raise ValidationError("Solo puedes tener un contrato de aprendizaje activo.")
+
+        # D. Modalidades NO contrato: validar 6 meses
+        if modalidad_obj and modalidad_obj.name_modality.upper().replace(' ', '_') != contrato_nombre:
+            especiales = activas.exclude(modality_productive_stage__name_modality__iexact=contrato_nombre)
+            meses_actuales = 0
+            for s in especiales:
+                if s.date_start_production_stage and s.date_end_production_stage:
+                    meses = (s.date_end_production_stage.year - s.date_start_production_stage.year) * 12 + (s.date_end_production_stage.month - s.date_start_production_stage.month)
+                    meses_actuales += meses
+            if meses_actuales + duracion_meses > 6:
+                raise ValidationError("La suma de solicitudes no puede superar 6 meses.")
+
+        return True
