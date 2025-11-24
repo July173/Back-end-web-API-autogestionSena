@@ -9,7 +9,6 @@ from apps.security.emails.AsignacionInstructor import send_instructor_assignment
 from apps.security.emails.AsignacionInstructor import send_assignment_to_instructor_email
 from core.utils.Validation import format_response
 from django.db import IntegrityError
-from apps.general.services.InstructorService import InstructorService
 from apps.assign.entity.models.Message import Message
 
 class AsignationInstructorService(BaseService):
