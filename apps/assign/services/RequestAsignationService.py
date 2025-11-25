@@ -557,15 +557,4 @@ class RequestAsignationService(BaseService):
             if activas.filter(modality_productive_stage__name_modality__iexact=modalidad_obj.name_modality).exists():
                 raise ValidationError("Solo puedes tener un contrato de aprendizaje activo.")
 
-        # D. Modalidades NO contrato: validar 6 meses
-        if modalidad_obj and modalidad_obj.name_modality.upper().replace(' ', '_') != contrato_nombre:
-            especiales = activas.exclude(modality_productive_stage__name_modality__iexact=contrato_nombre)
-            meses_actuales = 0
-            for s in especiales:
-                if s.date_start_production_stage and s.date_end_production_stage:
-                    meses = (s.date_end_production_stage.year - s.date_start_production_stage.year) * 12 + (s.date_end_production_stage.month - s.date_start_production_stage.month)
-                    meses_actuales += meses
-            if meses_actuales + duracion_meses > 6:
-                raise ValidationError("La suma de solicitudes no puede superar 6 meses.")
-
         return True
