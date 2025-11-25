@@ -11,11 +11,12 @@ from apps.security.entity.models import User
 from apps.assign.entity.models import RequestAsignation
 from apps.general.entity.models import PersonSede
 from dateutil.relativedelta import relativedelta
-from apps.assign.entity.models import AsignationInstructor
 from django.utils.dateparse import parse_date
 from apps.assign.entity.models import Enterprise, Boss, HumanTalent
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from apps.assign.entity.serializers.form.RequestAsignationDashboardSerializer import RequestAsignationDashboardSerializer
+
 
 
 logger = logging.getLogger(__name__)
@@ -205,76 +206,19 @@ class RequestAsignationService(BaseService):
             
             
             aprendiz = Apprentice.objects.select_related('person', 'ficha').get(pk=aprendiz_id)
-            
             # Buscar la solicitud más reciente del aprendiz
             # Boss es una relación 1:N (Boss.enterprise FK) -> usar prefetch_related para traer bosses
             latest_request = RequestAsignation.objects.filter(
-                aprendiz=aprendiz
+                apprentice=aprendiz
             ).select_related(
                 'enterprise',
                 'modality_productive_stage'
             ).prefetch_related('enterprise__bosses').order_by('-request_date').first()
             
-            result = {
-                'has_request': latest_request is not None,
-                'request': None,
-                'instructor': None,
-                'request_state': None
-            }
-            
             if latest_request:
-                # Obtener el nombre del boss si existe
-                boss_name = None
-                # Obtener primer boss si existe
-                if latest_request.enterprise and latest_request.enterprise.bosses.exists():
-                    boss_obj = latest_request.enterprise.bosses.first()
-                    boss_name = boss_obj.name_boss if boss_obj else None
-                
-                # Información de la solicitud
-                result['request'] = {
-                    'id': latest_request.id,
-                    'enterprise_name': latest_request.enterprise.name_enterprise if latest_request.enterprise else None,
-                    'boss_name': boss_name,
-                    'modality': latest_request.modality_productive_stage.name_modality if latest_request.modality_productive_stage else None,
-                    'start_date': str(latest_request.date_start_production_stage),
-                    'end_date': str(latest_request.date_end_production_stage),
-                    'request_date': str(latest_request.request_date),
-                    'request_state': latest_request.request_state,
-                    'pdf_url': latest_request.pdf_request.url if latest_request.pdf_request else None,
-                }
-                result['request_state'] = latest_request.request_state
-                
-                # Buscar si tiene instructor asignado
-                asignacion = AsignationInstructor.objects.filter(
-                    request_asignation=latest_request
-                ).select_related('instructor__person', 'instructor__knowledgeArea').first()
-                
-                if asignacion:
-                    from apps.security.entity.models import User
-                    instructor = asignacion.instructor
-                    
-                    # Obtener el email del usuario relacionado con la persona del instructor
-                    email = None
-                    try:
-                        user = User.objects.filter(person=instructor.person).first()
-                        if user:
-                            email = user.email
-                    except:
-                        pass
-                    
-                    result['instructor'] = {
-                        'id': instructor.id,
-                        'first_name': instructor.person.first_name,
-                        'second_name': instructor.person.second_name,
-                        'first_last_name': instructor.person.first_last_name,
-                        'second_last_name': instructor.person.second_last_name,
-                        'email': email,
-                        'phone': instructor.person.phone_number,
-                        'knowledge_area': instructor.knowledgeArea.name if instructor.knowledgeArea else None,
-                        'assigned_at': str(latest_request.request_date),
-                    }
-            
-            return result
+                return RequestAsignationDashboardSerializer(latest_request).data
+            else:
+                return None
             
         except Apprentice.DoesNotExist:
             return self.error_response('Aprendiz no encontrado', 'not_found')

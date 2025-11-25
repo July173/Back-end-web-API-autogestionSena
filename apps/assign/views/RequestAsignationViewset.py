@@ -259,10 +259,11 @@ class RequestAsignationViewset(BaseViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         result = self.service_class().get_aprendiz_dashboard(aprendiz_id)
-        if result.get('success', True):
-            return Response(result, status=status.HTTP_200_OK)
-        else:
-            return Response(result, status=status.HTTP_404_NOT_FOUND)
+        if result is None:
+            return Response({'detail': 'No se encontró solicitud para el aprendiz.'}, status=status.HTTP_404_NOT_FOUND)
+        if isinstance(result, dict) and result.get('success') is False:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result, status=status.HTTP_200_OK)
     
     
     #--- Filter Form Requests -------
