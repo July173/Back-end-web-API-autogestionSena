@@ -8,6 +8,20 @@ from apps.general.services.NotificationService import NotificationService
 
 class NotificationViewset(viewsets.ViewSet):
 
+    #---- Retrieve Notification by ID ----#
+    @swagger_auto_schema(
+        responses={200: NotificationSerializer()},
+        tags=['Notificaciones']
+    )
+    def retrieve(self, request, pk=None):
+        service = NotificationService()
+        notification = service.get_notification_by_id(pk)
+        if not notification:
+            return Response({'detail': 'Notificación no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = NotificationSerializer(notification)
+        return Response(serializer.data)
+
+    #---- List Notifications ----#
     @swagger_auto_schema(
         manual_parameters=[
             openapi.Parameter('apprentice_id', openapi.IN_QUERY, description="ID del aprendiz", type=openapi.TYPE_INTEGER, required=False),

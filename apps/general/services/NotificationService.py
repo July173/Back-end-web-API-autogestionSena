@@ -9,10 +9,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 class NotificationService:
+
     def __init__(self):
         self.repository = NotificationRepository()
 
-    
+    #--- Create Notification ---#
     def create_notification(self, validated_data):
         # repository.create expects a single dict argument (see BaseRepository.create)
         if not isinstance(validated_data, dict):
@@ -32,7 +33,7 @@ class NotificationService:
         except Exception as e:
             logger.exception(f"Error al crear Notification en repositorio: {e} | payload={log_preview}")
             raise
-        # Enviar notificación por WebSocket
+        # Send real-time notification via Channels
         channel_layer = get_channel_layer()
         if channel_layer is not None:
             group_name = f"notifications_{notification.id_user.id}"
@@ -46,8 +47,9 @@ class NotificationService:
             )
         return notification
 
+    #--- Notify Methods ---#
     def notify_request_created(self, apprentice, ficha, sede):
-        # Notifica a los coordinadores de la sede del aprendiz
+        # Notify coordinators of the apprentice's location
         
         try:
             coordinador_role = Role.objects.filter(type_role="Coordinador").first()
@@ -64,7 +66,7 @@ class NotificationService:
                 logger.debug("No hay role 'Coordinador' definido en la base de datos")
                 return
 
-            # Enviar a todas las cuentas que tengan rol 'Coordinador'
+            # Send to all accounts with the 'Coordinador' role
             coordinadores = User.objects.filter(role=coordinador_role).distinct()
             logger.debug(f"Enviando notificación de solicitud a {coordinadores.count()} coordinadores")
             for coordinador in coordinadores:
@@ -83,9 +85,10 @@ class NotificationService:
         except Exception as e:
             logger.exception(f"Error en notify_request_created: {e} | apprentice={repr(apprentice)} ficha={repr(ficha)} sede={repr(sede)}")
 
+    #--- Notify Assignment ---#
     def notify_assignment(self, apprentice, instructor, ficha=None):
-        # Notifica al aprendiz y al instructor asignado
-        # Notificar al aprendiz
+        # Notify the apprentice and the assigned instructor
+        # Notify the apprentice
         user_apprentice = User.objects.filter(person_id=getattr(apprentice.person, 'id', None)).first()
         if user_apprentice:
             self.create_notification({
@@ -95,7 +98,7 @@ class NotificationService:
                 'type': 'asignacion',
                 'link': '',
             })
-        # Notificar al instructor
+        # Notify the instructor
         user_instructor = User.objects.filter(person_id=getattr(instructor.person, 'id', None)).first()
         if user_instructor:
             self.create_notification({
@@ -106,8 +109,9 @@ class NotificationService:
                 'link': '',
             })
 
+    #--- Notify Rejection ---#
     def notify_rejection(self, apprentice, motivo):
-        # Notifica al aprendiz sobre el rechazo
+        # Notify the apprentice about the rejection
         user_apprentice = User.objects.filter(person_id=getattr(apprentice.person, 'id', None)).first()
         if user_apprentice:
             self.create_notification({
@@ -118,8 +122,9 @@ class NotificationService:
                 'link': '',
             })
 
+    #--- Notify Registration ---#
     def notify_registration(self, apprentice):
-        # Notifica a todos los administradores cuando un aprendiz se registra
+        # Notify all administrators when an apprentice registers
         admin_role = Role.objects.filter(type_role="Administrador").first()
         if admin_role:
             admins = User.objects.filter(role=admin_role)
@@ -132,9 +137,10 @@ class NotificationService:
                     'link': '',
                 })
 
+    #--- Notify Reassignment ---#
     def notify_reassignment(self, apprentice, instructor_old, instructor_new, ficha=None):
-        # Notifica al aprendiz y a los dos instructores
-        # Aprendiz
+        # Notify the apprentice and the two instructors
+        # Apprentice
         user_apprentice = User.objects.filter(person_id=getattr(apprentice.person, 'id', None)).first()
         if user_apprentice:
             self.create_notification({
@@ -144,7 +150,7 @@ class NotificationService:
                 'type': 'reasignacion',
                 'link': '',
             })
-        # Instructor anterior
+        # Previous instructor
         user_old = User.objects.filter(person_id=getattr(instructor_old.person, 'id', None)).first()
         if user_old:
             self.create_notification({
@@ -154,7 +160,7 @@ class NotificationService:
                 'type': 'reasignacion',
                 'link': '',
             })
-        # Instructor nuevo
+        # New instructor
         user_new = User.objects.filter(person_id=getattr(instructor_new.person, 'id', None)).first()
         if user_new:
             self.create_notification({
@@ -165,7 +171,7 @@ class NotificationService:
                 'link': '',
             })
 
-
+    #--- Get Notifications ---#
     def get_notifications(self, apprentice_id=None, instructor_id=None, coordinator_id=None, sofia_operator_id=None, admin_id=None):
         user = None
         role_map = {
@@ -206,7 +212,15 @@ class NotificationService:
             raise ValueError('No hay notificaciones para este usuario.')
         return qs
         
+    #--- List All Notifications ---#
     def list_all(self):
         """Devuelve todas las notificaciones ordenadas por fecha descendente."""
         return self.repository.list_all()
     
+    #--- Get Notification by ID ---#
+    def get_notification_by_id(self, notification_id):
+        notification = self.repository.get_by_id(notification_id)
+        if notification and not notification.is_read:
+            notification.is_read = True
+            notification.save(update_fields=["is_read"])
+        return notification
