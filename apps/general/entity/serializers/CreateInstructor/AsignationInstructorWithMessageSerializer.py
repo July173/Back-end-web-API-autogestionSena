@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.assign.entity.models import AsignationInstructor, RequestAsignation, Message
+from apps.assign.entity.models import AsignationInstructor, RequestAsignation
 from apps.general.entity.models import Instructor
 from apps.assign.entity.enums.request_state_enum import RequestState
 
@@ -44,8 +44,7 @@ class AsignationInstructorWithMessageSerializer(serializers.ModelSerializer):
                     'id': m.id,
                     'content': m.content,
                     'type_message': m.type_message,
-                    'whose_message': m.whose_message,
-                    'created_at': m.created_at if hasattr(m, 'created_at') else None
+                    'whose_message': m.whose_message
                 }
                 for m in messages
             ]

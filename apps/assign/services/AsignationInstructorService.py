@@ -56,14 +56,13 @@ class AsignationInstructorService(BaseService):
                 )
 
             asignation = self.repository.create_custom(instructor, request_asignation)
-            # Crear mensaje si se proporciona contenido
-            if content:
-                from apps.assign.entity.models import Message
+            # Crear mensaje solo una vez si se proporciona contenido o tipo
+            if content or type_message:
                 Message.objects.create(
                     request_asignation=request_asignation,
-                    content=content,
-                    type_message=type_message or '',
-                    whose_message=whose_message or ''
+                    content=content or "",
+                    type_message=type_message or "",
+                    whose_message=whose_message or ""
                 )
 
             # Si se proporcionó request_state en la petición, validarlo y aplicarlo.
@@ -73,7 +72,6 @@ class AsignationInstructorService(BaseService):
                     return format_response(f"Estado inválido. Valores permitidos: {valid_states}", success=False, type="invalid_state", status_code=400)
                 request_asignation.request_state = request_state
                 request_asignation.save()
-
 
             # Validar que no se exceda el máximo de asignaciones
             max_learners = instructor.max_assigned_learners
@@ -89,14 +87,6 @@ class AsignationInstructorService(BaseService):
                 )
             instructor.assigned_learners = new_assigned_learners
             instructor.save()
-
-            # Crear Message asociado si se proporcionó contenido/tipo
-            if content or type_message:                
-                Message.objects.create(
-                    request_asignation=request_asignation,
-                    content=content or "",
-                    type_message=type_message or ""
-                )
             # Enviar correo al aprendiz
             apprentice = request_asignation.apprentice
             person = apprentice.person
