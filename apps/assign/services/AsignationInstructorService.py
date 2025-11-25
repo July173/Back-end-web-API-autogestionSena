@@ -107,7 +107,9 @@ class AsignationInstructorService(BaseService):
                 send_assignment_to_instructor_email(
                     instructor_email,
                     f"{person.first_name} {person.first_last_name}",
-                    f"{instructor.person.first_name} {instructor.person.first_last_name}"
+                    f"{instructor.person.first_name} {instructor.person.first_last_name}",
+                    person.number_identification,
+                    email
                 )
             # Crear visitas automáticas si el estado es 'ASIGNADO'
             if request_asignation.request_state == RequestState.ASIGNADO:
