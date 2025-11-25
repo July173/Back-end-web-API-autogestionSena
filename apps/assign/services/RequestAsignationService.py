@@ -3,6 +3,7 @@ from apps.assign.repositories.RequestAsignationRepository import RequestAsignati
 from django.db import transaction
 import logging
 from apps.general.entity.models import Apprentice, Ficha, Sede
+from apps.security.entity.models import Person
 from apps.assign.entity.models import ModalityProductiveStage
 from apps.assign.entity.enums.request_state_enum import RequestState
 from apps.assign.entity.models import RequestAsignation
@@ -16,6 +17,7 @@ from apps.assign.entity.models import Enterprise, Boss, HumanTalent
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from apps.assign.entity.serializers.form.RequestAsignationDashboardSerializer import RequestAsignationDashboardSerializer
+from apps.general.services.NotificationService import NotificationService
 
 
 
@@ -56,7 +58,7 @@ class RequestAsignationService(BaseService):
             apprentice = request.apprentice
             person = apprentice.person
             nombre_aprendiz = f"{person.first_name} {person.first_last_name}"
-            user = User.objects.filter(person=person).first()
+            user = User.objects.filter(person_id=getattr(person, 'id', None)).first()
             email = user.email if user else None
             if email:
                 send_rejection_email(email, nombre_aprendiz, rejection_message)
@@ -104,10 +106,10 @@ class RequestAsignationService(BaseService):
             }
             person, aprendiz, enterprise, boss, human_talent, modality, request_asignation, regional, center, sede = result
             # Obtener correo del aprendiz desde User
-            user = User.objects.filter(person=person).first()
+            user = User.objects.filter(person_id=getattr(person, 'id', None)).first()
             correo_aprendiz = user.email if user else None
             # Obtener sede, centro y regional desde PersonSede
-            personsede = PersonSede.objects.filter(person=person).first()
+            personsede = PersonSede.objects.filter(person_id=getattr(person, 'id', None)).first()
             sede_obj = personsede.sede if personsede else sede
             center_obj = sede_obj.center if sede_obj and hasattr(sede_obj, 'center') else center
             regional_obj = center_obj.regional if center_obj and hasattr(center_obj, 'regional') else regional
@@ -342,6 +344,7 @@ class RequestAsignationService(BaseService):
             sede_id = solicitud_payload.get('sede') or solicitud_payload.get('site')
             modality_id = solicitud_payload.get('modality_productive_stage') or solicitud_payload.get('modality')
 
+            logger.debug(f"create_complete_request_package payload apprentice_id={apprentice_id} tipo={type(apprentice_id)} sede_id={sede_id} tipo_sede_id={type(sede_id)}")
             if not apprentice_id:
                 return self.error_response('El campo solicitud.apprentice es requerido', 'missing_apprentice')
 
@@ -352,9 +355,23 @@ class RequestAsignationService(BaseService):
             if ficha_id:
                 ficha = Ficha.objects.get(pk=ficha_id)
 
+            # Normalizar 'sede_id': aceptar pk (int/str) o nombre parcial
             sede = None
             if sede_id is not None:
-                sede = Sede.objects.get(pk=sede_id)
+                try:
+                    # primero intentar como PK
+                    sede = Sede.objects.get(pk=int(sede_id))
+                except Exception:
+                    # intentar buscar por nombre parcial
+                    sede = Sede.objects.filter(name__icontains=str(sede_id).split('(')[0].strip()).first()
+                    if not sede:
+                        logger.debug(f"No se encontró sede por nombre: {sede_id}")
+                        return self.error_response(f"No se encontró la sede: {sede_id}", 'not_found')
+                logger.debug(f"sede resuelta: {getattr(sede, 'id', None)} tipo={type(sede)} nombre={getattr(sede,'name',None)}")
+            # Validación estricta: asegurar que `sede` sea instancia de Sede si se resolvió
+            if sede is not None and not isinstance(sede, Sede):
+                logger.error(f"Valor de 'sede' no es instancia de Sede tras normalizar: valor={sede} tipo={type(sede)}")
+                return self.error_response(f"Sede inválida: {sede}", 'invalid_sede')
 
             modality = None
             if modality_id:
@@ -441,12 +458,33 @@ class RequestAsignationService(BaseService):
 
                 # Actualizar PersonSede si se proporcionó sede
                 if sede:
-                    person = apprentice.person
-                    PersonSede.objects.update_or_create(
-                        person=person,
-                        defaults={"sede": sede}
-                    )
+                    try:
+                        person = apprentice.person
+                        logger.debug(f"apprentice.person valor={person} tipo={type(person)}")
+                        # Asegurar que 'person' sea instancia de Person
+                        if not isinstance(person, Person):
+                            person = Person.objects.get(pk=getattr(apprentice, 'person_id', None))
+                            logger.debug(f"person resuelto por id: {person} tipo={type(person)}")
 
+                        # Usar person_id en la búsqueda para evitar pasar un objeto incorrecto
+                        # Usar sede_id en defaults para evitar pasar instancias/strings ambiguos
+                        PersonSede.objects.update_or_create(
+                            person_id=getattr(apprentice, 'person_id', None),
+                            defaults={"sede_id": sede.id if sede else None}
+                        )
+                    except Exception as e:
+                        logger.exception("Error actualizando PersonSede")
+                        return self.error_response(f"Error al actualizar PersonSede: {e}", 'person_sede_error')
+
+                # Notificar a los coordinadores de la sede y ficha del aprendiz (centralizado)
+                notification_service = NotificationService()
+                ficha_obj = apprentice.ficha
+                sede_obj = sede if sede else None
+                if not sede_obj:
+                    person_sede = PersonSede.objects.filter(person_id=getattr(apprentice, 'person_id', None)).first()
+                    if person_sede:
+                        sede_obj = person_sede.sede
+                notification_service.notify_request_created(apprentice, ficha_obj, sede_obj)
                 return {
                     'success': True,
                     'message': 'Solicitud creada exitosamente',
@@ -471,6 +509,17 @@ class RequestAsignationService(BaseService):
         except ModalityProductiveStage.DoesNotExist:
             return self.error_response('Modalidad no encontrada', 'not_found')
         except Exception as e:
+            try:
+                # Intentar registrar tipos de variables claves para depuración
+                debug_info = {
+                    'apprentice_id': locals().get('apprentice_id'),
+                    'apprentice_person': str(type(locals().get('apprentice').person)) if locals().get('apprentice', None) and hasattr(locals().get('apprentice'), 'person') else str(type(locals().get('apprentice', None))),
+                    'sede_id': locals().get('sede_id'),
+                    'sede': str(type(locals().get('sede', None)))
+                }
+            except Exception:
+                debug_info = {'locals_error': 'error obteniendo locals()'}
+            logger.exception(f"Error al crear solicitud completa: {e} | debug: {debug_info}")
             return self.error_response(f"Error al crear solicitud completa: {e}", 'create_complete_request')
 
 
