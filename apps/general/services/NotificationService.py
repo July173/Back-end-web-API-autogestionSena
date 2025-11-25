@@ -34,15 +34,16 @@ class NotificationService:
             raise
         # Enviar notificación por WebSocket
         channel_layer = get_channel_layer()
-        group_name = f"notifications_{notification.id_user.id}"
-        serializer = NotificationSerializer(notification)
-        async_to_sync(channel_layer.group_send)(
-            group_name,
-            {
-                'type': 'send_notification',
-                'notification': serializer.data
-            }
-        )
+        if channel_layer is not None:
+            group_name = f"notifications_{notification.id_user.id}"
+            serializer = NotificationSerializer(notification)
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    'type': 'send_notification',
+                    'notification': serializer.data
+                }
+            )
         return notification
 
     def notify_request_created(self, apprentice, ficha, sede):

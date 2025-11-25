@@ -2,6 +2,8 @@ from apps.general.entity.models.Notification import Notification
 
 
 class NotificationRepository:
+
+        
     def __init__(self):
         self.model = Notification
 
@@ -46,3 +48,5 @@ class NotificationRepository:
             id_user__role__type_role__iexact='Operador Sofia Plus'
         ).order_by('-created_at')
 
+    def create(self, validated_data):
+        return self.model.objects.create(**validated_data)

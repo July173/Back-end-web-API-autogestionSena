@@ -12,6 +12,8 @@ from django.db import IntegrityError
 from apps.assign.entity.models.Message import Message
 from apps.assign.entity.models import VisitFollowing
 from dateutil.relativedelta import relativedelta
+from apps.general.services.NotificationService import NotificationService
+
 
 class AsignationInstructorService(BaseService):
     def __init__(self):
@@ -139,6 +141,9 @@ class AsignationInstructorService(BaseService):
                             pdf_report=None
                         ))
                     VisitFollowing.objects.bulk_create(visitas)
+            # Notificar por sistema al aprendiz e instructor
+            
+            NotificationService().notify_assignment(apprentice, instructor, ficha=request_asignation.apprentice.ficha)
             return asignation
         except IntegrityError as ie:
             # Manejo de condición de carrera: si otra petición creó la asignación simultáneamente
