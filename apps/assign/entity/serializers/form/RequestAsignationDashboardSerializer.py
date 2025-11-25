@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from apps.assign.entity.models import RequestAsignation
 
+
+from apps.security.entity.models import User
+
 class RequestAsignationDashboardSerializer(serializers.ModelSerializer):
 
 
@@ -13,6 +16,7 @@ class RequestAsignationDashboardSerializer(serializers.ModelSerializer):
     instructor_phone_number = serializers.SerializerMethodField()
     instructor_type_identification = serializers.SerializerMethodField()
     instructor_knowledge_area = serializers.SerializerMethodField()
+    instructor_email = serializers.SerializerMethodField()
 
     class Meta:
         model = RequestAsignation
@@ -34,7 +38,15 @@ class RequestAsignationDashboardSerializer(serializers.ModelSerializer):
             'instructor_phone_number',
             'instructor_type_identification',
             'instructor_knowledge_area',
+            'instructor_email',
         ]
+
+    def get_instructor_email(self, obj):
+        instructor = self._get_instructor(obj)
+        if instructor:
+            user = User.objects.filter(person=instructor.person).first()
+            return user.email if user else None
+        return None
 
     start_date = serializers.SerializerMethodField()
     end_date = serializers.SerializerMethodField()
