@@ -1,44 +1,49 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework.decorators import action
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from apps.general.entity.models.Notification import Notification
 from apps.general.entity.serializers.NotificationSerializer import NotificationSerializer
 from apps.general.services.NotificationService import NotificationService
 
-class NotificationViewset(viewsets.ModelViewSet):
-    queryset = Notification.objects.all()
-    serializer_class = NotificationSerializer
-    service_class = NotificationService
+
+class NotificationViewset(viewsets.ViewSet):
 
     @swagger_auto_schema(
-        operation_description="Crea una nueva notificación.",
-        tags=["Notification"]
+        manual_parameters=[
+            openapi.Parameter('apprentice_id', openapi.IN_QUERY, description="ID del aprendiz", type=openapi.TYPE_INTEGER, required=False),
+            openapi.Parameter('instructor_id', openapi.IN_QUERY, description="ID del instructor", type=openapi.TYPE_INTEGER, required=False),
+            openapi.Parameter('coordinator_id', openapi.IN_QUERY, description="ID del coordinador", type=openapi.TYPE_INTEGER, required=False),
+            openapi.Parameter('sofia_operator_id', openapi.IN_QUERY, description="ID del operador de Sofia Plus", type=openapi.TYPE_INTEGER, required=False),
+            openapi.Parameter('admin_id', openapi.IN_QUERY, description="ID del administrador", type=openapi.TYPE_INTEGER, required=False),
+        ],
+        responses={200: NotificationSerializer(many=True)},
+        tags=['Notificaciones']
     )
-    @action(detail=False, methods=['post'], url_path='create')
-    def create_notification(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        notification = self.service_class().create_notification(serializer.validated_data)
-        return Response(self.get_serializer(notification).data, status=status.HTTP_201_CREATED)
+    def list(self, request):
+        apprentice_id = request.query_params.get('apprentice_id')
+        instructor_id = request.query_params.get('instructor_id')
+        coordinator_id = request.query_params.get('coordinator_id')
+        sofia_operator_id = request.query_params.get('sofia_operator_id')
+        admin_id = request.query_params.get('admin_id')
+        service = NotificationService()
+        try:
+            if apprentice_id:
+                qs = service.get_notifications(apprentice_id=apprentice_id)
+            elif instructor_id:
+                qs = service.get_notifications(instructor_id=instructor_id)
+            elif coordinator_id:
+                qs = service.get_notifications(coordinator_id=coordinator_id)
+            elif sofia_operator_id:
+                qs = service.get_notifications(sofia_operator_id=sofia_operator_id)
+            elif admin_id:
+                qs = service.get_notifications(admin_id=admin_id)
+            else:
+                qs = service.list_all()
+            if qs is None:
+                return Response({'detail': 'No hay notificaciones para este usuario.'}, status=status.HTTP_204_NO_CONTENT)
+            serializer = NotificationSerializer(qs, many=True)
+            return Response(serializer.data)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
 
-    @swagger_auto_schema(
-        operation_description="Lista todas las notificaciones.",
-        tags=["Notification"]
-    )
-    @action(detail=False, methods=['get'], url_path='list')
-    def list_notifications(self, request):
-        notifications = self.service_class().list_notifications()
-        serializer = self.get_serializer(notifications, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    @swagger_auto_schema(
-        operation_description="Obtiene una notificación por ID.",
-        tags=["Notification"]
-    )
-    @action(detail=True, methods=['get'], url_path='get')
-    def get_notification(self, request, pk=None):
-        notification = self.service_class().get_notification(pk)
-        serializer = self.get_serializer(notification)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    

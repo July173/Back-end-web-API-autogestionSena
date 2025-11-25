@@ -5,12 +5,11 @@ class Notification(models.Model):
     class Meta:
         db_table = 'notification'
 
-    id_notification = models.AutoField(primary_key=True)
     id_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     title = models.CharField(max_length=255)
     message = models.TextField()
     type = models.CharField(max_length=50)
-    link = models.URLField(max_length=500, null=True, blank=True)
+    link = models.CharField(max_length=100, null=True, blank=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

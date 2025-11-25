@@ -35,8 +35,8 @@ router.register(r'support-contacts', SupportContactViewset, basename='general_su
 router.register(r'legal-documents', LegalDocumentViewset, basename='general_legal_documents')
 router.register(r'legal-sections', LegalSectionViewset, basename='general_legal_sections')
 router.register(r'type-contracts', TypeContractViewset, basename='general_type_contracts')
-router.register(r'notifications', NotificationViewset, basename='notifications')
+router.register(r'notifications', NotificationViewset, basename='general_notifications')
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('', include(router.urls)), 
 ]
