@@ -44,6 +44,7 @@ class AsignationInstructorWithMessageSerializer(serializers.ModelSerializer):
                     'id': m.id,
                     'content': m.content,
                     'type_message': m.type_message,
+                    'whose_message': m.whose_message,
                     'created_at': m.created_at if hasattr(m, 'created_at') else None
                 }
                 for m in messages
