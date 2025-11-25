@@ -17,7 +17,7 @@ class AsignationInstructorService(BaseService):
     def __init__(self):
         self.repository = AsignationInstructorRepository()
 
-    def create_custom(self, instructor_id, request_asignation_id, content=None, type_message=None, request_state=None):
+    def create_custom(self, instructor_id, request_asignation_id, content=None, type_message=None, whose_message=None, request_state=None):
         try:
             instructor = Instructor.objects.get(id=instructor_id)
             request_asignation = RequestAsignation.objects.get(id=request_asignation_id)
@@ -56,6 +56,15 @@ class AsignationInstructorService(BaseService):
                 )
 
             asignation = self.repository.create_custom(instructor, request_asignation)
+            # Crear mensaje si se proporciona contenido
+            if content:
+                from apps.assign.entity.models import Message
+                Message.objects.create(
+                    request_asignation=request_asignation,
+                    content=content,
+                    type_message=type_message or '',
+                    whose_message=whose_message or ''
+                )
 
             # Si se proporcionó request_state en la petición, validarlo y aplicarlo.
             if request_state:

@@ -106,11 +106,12 @@ class AsignationInstructorViewset(BaseViewSet):
         request_asignation_id = request.data.get('request_asignation')
         content = request.data.get('content')
         type_message = request.data.get('type_message')
+        whose_message = request.data.get('whose_message')
         request_state = request.data.get('request_state')
         if not instructor_id or not request_asignation_id:
             return Response({"status": "error", "type": "missing_data", "message": "Faltan datos obligatorios."}, status=status.HTTP_400_BAD_REQUEST)
         service = self.service_class()
-        result = service.create_custom(instructor_id, request_asignation_id, content=content, type_message=type_message, request_state=request_state)
+        result = service.create_custom(instructor_id, request_asignation_id, content=content, type_message=type_message, whose_message=whose_message, request_state=request_state)
         if isinstance(result, dict) and result.get('status') == 'error':
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
         

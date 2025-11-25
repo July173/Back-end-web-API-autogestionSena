@@ -9,6 +9,7 @@ class AsignationInstructorSerializer(serializers.ModelSerializer):
     request_asignation = serializers.PrimaryKeyRelatedField(queryset=RequestAsignation.objects.all())
     content = serializers.CharField(required=False, allow_blank=True, write_only=True)
     type_message = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    whose_message = serializers.CharField(required=False, allow_blank=True, allow_null=True, write_only=True)
     request_state = serializers.ChoiceField(choices=[(choice.value, choice.label) for choice in RequestState], required=False, write_only=True)
 
     class Meta:
@@ -20,5 +21,6 @@ class AsignationInstructorSerializer(serializers.ModelSerializer):
             'request_asignation',
             'content',
             'type_message',
+            'whose_message',
             'request_state'
         ]
