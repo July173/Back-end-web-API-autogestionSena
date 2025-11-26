@@ -63,6 +63,8 @@ class RequestAsignationService(BaseService):
             email = user.email if user else None
             if email:
                 send_rejection_email(email, nombre_aprendiz, rejection_message)
+            # Notificación al aprendiz
+            NotificationService().notify_rejection(apprentice, rejection_message)
             return {
                 'success': True,
                 'message': 'Solicitud rechazada correctamente',
@@ -385,8 +387,8 @@ class RequestAsignationService(BaseService):
 
             # Validate modality and duration
             duration_months = 6
-            if start_date and end_date:
-                difference = relativedelta(end_date, start_date)
+            if fecha_inicio and fecha_fin:
+                difference = relativedelta(fecha_fin, fecha_inicio)
                 duration_months = difference.years * 12 + difference.months
                 if duration_months < 0:
                     return self.error_response("La fecha de fin debe ser posterior a la de inicio.", "invalid_dates")

@@ -10,6 +10,7 @@ from apps.security.entity.models.DocumentType import DocumentType
 from django.utils.crypto import get_random_string
 from core.utils.Validation import is_soy_sena_email
 from apps.security.services.UserService import UserService
+from apps.general.services.NotificationService import NotificationService
 
 
 class AprendizService(BaseService):
@@ -77,6 +78,13 @@ class AprendizService(BaseService):
                     send_account_created_email(email, full_name, password_temporal)
                 except Exception as e:
                     print(f"[AprendizService] No se pudo enviar el correo de registro al aprendiz: {str(e)}")
+
+                # Notificar a los administradores del registro del aprendiz
+                try:
+                    
+                    NotificationService().notify_registration(aprendiz)
+                except Exception as e:
+                    print(f"[AprendizService] No se pudo notificar a los administradores: {str(e)}")
 
                 return format_response(
                     f"Aprendiz registrado exitosamente. Email: {user.email}",
