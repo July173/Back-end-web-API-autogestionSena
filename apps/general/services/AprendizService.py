@@ -79,12 +79,7 @@ class AprendizService(BaseService):
                 except Exception as e:
                     print(f"[AprendizService] No se pudo enviar el correo de registro al aprendiz: {str(e)}")
 
-                # Notificar a los administradores del registro del aprendiz
-                try:
-                    
-                    NotificationService().notify_registration(aprendiz)
-                except Exception as e:
-                    print(f"[AprendizService] No se pudo notificar a los administradores: {str(e)}")
+
 
                 return format_response(
                     f"Aprendiz registrado exitosamente. Email: {user.email}",
