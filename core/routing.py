@@ -1,7 +1,7 @@
 from channels.routing import URLRouter
-from channels.auth import AuthMiddlewareStack
 from channels.security.websocket import OriginValidator, AllowedHostsOriginValidator
 import apps.general.routing
+from apps.security.middleware.jwt_auth_middleware import JwtAuthMiddleware
 
 # Expose a websocket ASGI application (not a ProtocolTypeRouter). The top-level
 # ProtocolTypeRouter will be created in core.asgi, combining HTTP and websocket.
@@ -15,7 +15,9 @@ allowed_origins = [
 
 websocket_application = AllowedHostsOriginValidator(
     OriginValidator(
-        AuthMiddlewareStack(
+        # Use JwtAuthMiddleware which sets `scope['user']` from a SimpleJWT
+        # access token passed via `?token=` or Authorization header.
+        JwtAuthMiddleware(
             URLRouter(apps.general.routing.websocket_urlpatterns)
         ),
         allowed_origins

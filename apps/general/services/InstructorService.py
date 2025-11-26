@@ -13,6 +13,8 @@ from core.utils.Validation import is_sena_email
 from apps.security.emails.CreacionCuentaUsers import send_account_created_email
 from django.utils.crypto import get_random_string
 from apps.assign.entity.models import AsignationInstructor
+from django.db import transaction
+from django.db.models import F
 
 
 
@@ -42,6 +44,32 @@ class InstructorService(BaseService):
                 instructor.assigned_learners = max_assigned_learners
         instructor.save()
         return instructor
+
+    def increment_assigned_learners(self, instructor_id, delta=1):
+        """Incrementa assigned_learners de forma atómica y valida límites."""
+        with transaction.atomic():
+            inst = Instructor.objects.select_for_update().filter(pk=instructor_id).first()
+            if not inst:
+                return None
+            current = inst.assigned_learners or 0
+            max_limit = inst.max_assigned_learners or 80
+            if current + delta > max_limit:
+                raise ValueError('El número de aprendices asignados no puede superar el límite máximo.')
+            inst.assigned_learners = current + delta
+            inst.save()
+            return inst
+
+    def decrement_assigned_learners(self, instructor_id, delta=1):
+        """Decrementa assigned_learners de forma atómica y evita valores negativos."""
+        with transaction.atomic():
+            inst = Instructor.objects.select_for_update().filter(pk=instructor_id).first()
+            if not inst:
+                return None
+            current = inst.assigned_learners or 0
+            new_val = max(current - delta, 0)
+            inst.assigned_learners = new_val
+            inst.save()
+            return inst
 
     def __init__(self):
         self.repository = InstructorRepository()

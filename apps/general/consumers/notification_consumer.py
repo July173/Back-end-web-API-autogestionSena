@@ -7,11 +7,32 @@ from apps.general.entity.serializers.NotificationSerializer import NotificationS
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.user_id = self.scope['url_route']['kwargs']['user_id']
+
+        # Require authentication: the JWT middleware sets scope['user'].
+        user = self.scope.get('user')
+        try:
+            is_auth = bool(user and getattr(user, 'is_authenticated', False))
+        except Exception:
+            is_auth = False
+
+        # If not authenticated or user id mismatch, reject the connection
+        if not is_auth:
+            await self.close(code=4001)
+            return
+
+        # Ensure the authenticated user's id matches the requested user_id
+        try:
+            auth_id = str(user.id)
+        except Exception:
+            auth_id = None
+
+        if auth_id != str(self.user_id):
+            # Prevent subscribing to other users' notifications
+            await self.close(code=4003)
+            return
+
         self.group_name = f'notifications_{self.user_id}'
-        await self.channel_layer.group_add(
-            self.group_name,
-            self.channel_name
-        )
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
     async def disconnect(self, close_code):
