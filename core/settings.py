@@ -189,6 +189,52 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8080",
 ]
 
+# Allow cookies/credentials from the browser when using `fetch(..., credentials: 'include')`
+CORS_ALLOW_CREDENTIALS = True
+
+# CSRF and session cookie settings helpful in local dev for cross-origin requests
+# Note: In production you should set SECURE flags and tighten origins accordingly.
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+]
+
+# For cross-site cookie usage during development you may need to relax SameSite.
+# If you use HTTPS in production, set SESSION_COOKIE_SECURE = True and CSRF_COOKIE_SECURE = True.
+SESSION_COOKIE_SAMESITE = None
+CSRF_COOKIE_SAMESITE = None
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
+
+# ============================
+# CHANNEL LAYERS (for django-channels)
+# ============================
+# Configure a channel layer backend. By default use an in-memory layer for
+# development. For production use Redis and set the environment variable
+# USE_REDIS_CHANNEL=true and REDIS_URL accordingly (e.g. redis://localhost:6379).
+USE_REDIS_CHANNEL = os.getenv('USE_REDIS_CHANNEL', 'False').lower() in ('true', '1')
+if USE_REDIS_CHANNEL:
+    REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [REDIS_URL],
+            },
+        },
+    }
+else:
+    # In-memory channel layer is suitable for local development and testing only.
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
+
+
 # ============================
 # EMAIL CONFIG (desde .env)
 # ============================

@@ -94,7 +94,7 @@ class NotificationService:
             self.create_notification({
                 'id_user': user_apprentice,
                 'title': 'Asignación de instructor',
-                'message': f'Se te ha asignado un instructor para la ficha {ficha.file_number if ficha else ''}.',
+                'message': f'Se te ha asignado un instructor para la ficha {ficha.file_number if ficha else ""}.',
                 'type': 'asignacion',
                 'link': '',
             })
@@ -104,7 +104,7 @@ class NotificationService:
             self.create_notification({
                 'id_user': user_instructor,
                 'title': 'Nueva asignación de seguimiento',
-                'message': f'Se te ha asignado un aprendiz para seguimiento en la ficha {ficha.file_number if ficha else ''}.',
+                'message': f'Se te ha asignado un aprendiz para seguimiento en la ficha {ficha.file_number if ficha else ""}.',
                 'type': 'asignacion',
                 'link': '',
             })
@@ -146,7 +146,7 @@ class NotificationService:
             self.create_notification({
                 'id_user': user_apprentice,
                 'title': 'Reasignación de instructor',
-                'message': f'Se ha reasignado tu instructor para la ficha {ficha.file_number if ficha else ''}.',
+                'message': f'Se ha reasignado tu instructor para la ficha {ficha.file_number if ficha else ""}.',
                 'type': 'reasignacion',
                 'link': '',
             })
@@ -156,7 +156,7 @@ class NotificationService:
             self.create_notification({
                 'id_user': user_old,
                 'title': 'Reasignación de aprendiz',
-                'message': f'El aprendiz ha sido reasignado a otro instructor en la ficha {ficha.file_number if ficha else ''}.',
+                'message': f'El aprendiz ha sido reasignado a otro instructor en la ficha {ficha.file_number if ficha else ""}.',
                 'type': 'reasignacion',
                 'link': '',
             })
@@ -166,7 +166,7 @@ class NotificationService:
             self.create_notification({
                 'id_user': user_new,
                 'title': 'Nueva asignación de aprendiz',
-                'message': f'Se te ha asignado un nuevo aprendiz en la ficha {ficha.file_number if ficha else ''}.',
+                'message': f'Se te ha asignado un nuevo aprendiz en la ficha {ficha.file_number if ficha else ""}.',
                 'type': 'reasignacion',
                 'link': '',
             })
