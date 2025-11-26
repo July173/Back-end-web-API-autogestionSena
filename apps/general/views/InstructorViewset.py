@@ -9,11 +9,13 @@ from apps.general.entity.serializers.CreateInstructor.InstructorSerializer impor
 from apps.general.entity.models import Instructor
 from apps.general.entity.serializers.CreateInstructor.CreateInstructorSerializer import CreateInstructorSerializer
 from apps.general.entity.serializers.CreateInstructor.GetInstructorSerializer import GetInstructorSerializer
+from apps.general.entity.serializers.CreateInstructor.AsignationInstructorWithMessageSerializer import AsignationInstructorWithMessageSerializer
 
 
 class InstructorViewset(BaseViewSet):
+
     
-    
+
     def get_queryset(self):
         return Instructor.objects.all()
     
@@ -142,35 +144,7 @@ class InstructorViewset(BaseViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-    # ----------- LIST -----------
-    @swagger_auto_schema(
-        operation_description="Obtiene una lista de todos los instructores registrados.",
-        manual_parameters=[
-            openapi.Parameter(
-                'is_followup_instructor',
-                openapi.IN_QUERY,
-                description="Filtrar instructores: 'all' (todos), 'true' (solo seguimiento), 'false' (solo no seguimiento)",
-                type=openapi.TYPE_STRING,
-                enum=['all', 'true', 'false']
-            )
-        ],
-        tags=["Instructor"]
-    )
-    @action(detail=False, methods=['get'], url_path='filtered')
-    def list_filtrado(self, request, *args, **kwargs):
-        is_followup = request.query_params.get('is_followup_instructor', 'all')
-        queryset = self.get_queryset()
-        if is_followup == 'true':
-            queryset = queryset.filter(is_followup_instructor=True)
-        elif is_followup == 'false':
-            queryset = queryset.filter(is_followup_instructor=False)
-        # Si es 'all' no se filtra
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+    # ----------- LIST ----------- (parámetros de filtrado unificados en el endpoint `filter`)
     
 
     # ----------- CUSTOM UPDATE -----------
@@ -244,6 +218,7 @@ class InstructorViewset(BaseViewSet):
         manual_parameters=[
             openapi.Parameter('search', openapi.IN_QUERY, description="Buscar por nombre o número de documento", type=openapi.TYPE_STRING),
             openapi.Parameter('knowledge_area_id', openapi.IN_QUERY, description="Filtrar por área de conocimiento (ID)", type=openapi.TYPE_INTEGER),
+            openapi.Parameter('is_followup_instructor', openapi.IN_QUERY, description="Filtrar instructores: 'all' (todos), 'true' (solo seguimiento), 'false' (solo no seguimiento)", type=openapi.TYPE_STRING, enum=['all','true','false']),
         ],
         responses={200: openapi.Response("Lista de instructores filtrados")},
         tags=["Instructor"]
@@ -252,12 +227,38 @@ class InstructorViewset(BaseViewSet):
     def filter_instructors(self, request):
         search = request.query_params.get('search')
         knowledge_area_id = request.query_params.get('knowledge_area_id')
+        is_followup = request.query_params.get('is_followup_instructor', 'all')
         if knowledge_area_id:
             try:
                 knowledge_area_id = int(knowledge_area_id)
             except ValueError:
                 return Response({"detail": "El ID de área de conocimiento debe ser un número."}, status=status.HTTP_400_BAD_REQUEST)
-        instructors = self.service_class().repository.get_filtered_instructors(search, knowledge_area_id)
-        serializer = self.get_serializer(instructors, many=True)
+
+        queryset = self.service_class().repository.get_filtered_instructors(search, knowledge_area_id, is_followup)
+        # Paginar resultados si corresponde
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(
+        operation_description="Lista todas las asignaciones de un instructor, incluyendo datos del aprendiz y la solicitud.",
+        tags=["Instructor"],
+        responses={200: openapi.Response("Lista de asignaciones", 
+            schema=openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Items(type=openapi.TYPE_OBJECT)
+            )
+        )}
+    )
+    @action(detail=True, methods=['get'], url_path='asignations')
+    def asignations(self, request, pk=None):
+        """
+        Endpoint para obtener todas las asignaciones de un instructor específico.
+        """
+        service = InstructorService()
+        asignaciones = service.get_asignations(pk)
+        serializer = AsignationInstructorWithMessageSerializer(asignaciones, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

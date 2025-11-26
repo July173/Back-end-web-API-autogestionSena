@@ -5,6 +5,7 @@ from apps.security.entity.models import User
 from apps.assign.emails.DesvinculacionInstructor import send_unassignment_to_instructor_email
 from apps.assign.emails.ReasignacionInstructor import send_assignment_to_new_instructor_email
 from apps.assign.emails.DesvinculacionAprendiz import send_unassignment_to_aprendiz_email
+from apps.general.services.NotificationService import NotificationService
 
 
 class AsignationInstructorHistoryService:
@@ -60,6 +61,20 @@ class AsignationInstructorHistoryService:
             aprendiz_email = aprendiz_user.email if aprendiz_user else None
             if aprendiz_email:
                 send_unassignment_to_aprendiz_email(aprendiz_email, nombre_aprendiz)
+            # Notificación interna por sistema (aprendiz, instructor anterior y nuevo instructor)
+            try:
+                
+                aprendiz = asignation_instructor.request_asignation.aprendiz
+                ficha = getattr(asignation_instructor.request_asignation, 'ficha', None)
+                NotificationService().notify_reassignment(
+                    apprentice=aprendiz,
+                    instructor_old=old_instructor,
+                    instructor_new=new_instructor,
+                    ficha=ficha
+                )
+            except Exception as e:
+                print(f"[AsignationInstructorHistoryService] No se pudo notificar la reasignación: {str(e)}")
+
             # Actualizar asignación con el nuevo instructor
             asignation_instructor.instructor = new_instructor
             asignation_instructor.save()

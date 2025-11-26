@@ -75,3 +75,23 @@ class BossViewset(BaseViewSet):
             {"detail": "No encontrado."},
             status=status.HTTP_404_NOT_FOUND
         )
+
+    @swagger_auto_schema(
+        method='get',
+        operation_description="Obtiene los jefes filtrados por empresa (enterprise_id).",
+        manual_parameters=[
+            openapi.Parameter(
+                'enterprise_id', openapi.IN_QUERY, description="ID de la empresa", type=openapi.TYPE_INTEGER, required=True
+            )
+        ],
+        responses={200: BossSerializer(many=True)},
+        tags=["Boss"]
+    )
+    @action(detail=False, methods=['get'], url_path='by-enterprise')
+    def by_enterprise(self, request):
+        enterprise_id = request.query_params.get('enterprise_id')
+        if not enterprise_id:
+            return Response({'detail': 'enterprise_id es requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        bosses = self.service_class().get_by_enterprise(enterprise_id)
+        serializer = self.serializer_class(bosses, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

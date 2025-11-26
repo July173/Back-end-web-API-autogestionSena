@@ -34,19 +34,19 @@ class MessageService:
                     "detail": msg
                 }
 
-        request_asignation_id = validated_data.get('request_asignation')
+        request_asignation = validated_data.get('request_asignation')
         content = validated_data.get('content')
         type_message = validated_data.get('type_message')
 
         # Validar existencia de RequestAsignation
-        try:
-            request_asignation = RequestAsignation.objects.get(id=request_asignation_id)
-        except RequestAsignation.DoesNotExist:
+        if not request_asignation:
             return {
                 "status": "error",
                 "type": "not_found",
-                "detail": f"No existe una solicitud de asignación con id {request_asignation_id}."
+                "detail": f"No existe una solicitud de asignación con ese id."
             }
 
         message = self.repository.create(request_asignation, content, type_message)
         return message
+
+    # Note: update_request_state removed — message/request state updates are handled elsewhere

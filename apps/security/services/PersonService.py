@@ -9,6 +9,7 @@ from core.utils.Validation import is_soy_sena_email, is_unique_email, validate_d
 from apps.security.emails.SendEmails import enviar_registro_pendiente
 from apps.security.entity.serializers.person.PersonSerializer import PersonSerializer
 from core.utils.Validation import format_response
+from apps.general.services.NotificationService import NotificationService
 
 
 class PersonService(BaseService):
@@ -59,10 +60,18 @@ class PersonService(BaseService):
                     'person_id': person.id,
                     'ficha': None  # It will be assigned later
                 }
+
                 aprendiz_result = AprendizService().create(aprendiz_data)
                 if isinstance(aprendiz_result, dict) and aprendiz_result.get('status') == 'error':
                     raise Exception('No se pudo crear el aprendiz')
                 aprendiz = aprendiz_result
+
+                # Notificar a los administradores del registro del aprendiz
+                try:
+                    
+                    NotificationService().notify_registration(aprendiz)
+                except Exception as e:
+                    print(f"[PersonService] No se pudo notificar a los administradores: {str(e)}")
 
                 # 4. Send pending registration email
                 fecha_registro = datetime.now().strftime('%d/%m/%Y')
