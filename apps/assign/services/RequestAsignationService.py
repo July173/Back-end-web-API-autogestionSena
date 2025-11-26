@@ -18,6 +18,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from apps.assign.entity.serializers.form.RequestAsignationDashboardSerializer import RequestAsignationDashboardSerializer
 from apps.general.services.NotificationService import NotificationService
+from apps.assign.repositories.MessageRepository import MessageRepository
 
 
 
@@ -270,7 +271,6 @@ class RequestAsignationService(BaseService):
             req = RequestAsignation.objects.get(pk=request_id)
 
             # Parse date strings if provided
-            
             if isinstance(fecha_inicio, str):
                 fecha_inicio_parsed = parse_date(fecha_inicio)
             else:
@@ -290,20 +290,27 @@ class RequestAsignationService(BaseService):
 
             # Apply updates
             updated = False
+            content = []
             if request_state is not None:
                 req.request_state = request_state
                 updated = True
+                content.append(f"Estado actualizado a: {request_state}")
 
             if fecha_inicio_parsed is not None:
                 req.date_start_production_stage = fecha_inicio_parsed
                 updated = True
+                content.append(f"Fecha de inicio actualizada a: {fecha_inicio_parsed}")
 
             if fecha_fin_parsed is not None:
                 req.date_end_production_stage = fecha_fin_parsed
                 updated = True
+                content.append(f"Fecha de fin actualizada a: {fecha_fin_parsed}")
 
             if updated:
                 req.save()
+                # Crear mensaje asociado a la actualización
+                if content:
+                    MessageRepository().create(req, " | ".join(content), "ACTUALIZACION")
 
             return {
                 'success': True,
