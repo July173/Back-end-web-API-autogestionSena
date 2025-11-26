@@ -431,6 +431,20 @@ class RequestAsignationService(BaseService):
                 if talento_payload.get('id'):
                     human_talent = HumanTalent.objects.get(pk=talento_payload.get('id'))
                 else:
+                    # Validate contract dates for new Human Talent
+                    if not fecha_inicio or not fecha_fin:
+                        return self.error_response("Las fechas de inicio y fin son obligatorias.", "missing_dates")
+                    fecha_inicio_parsed = parse_date(str(fecha_inicio)) if not isinstance(fecha_inicio, (str, type(timezone.now().date()))) else fecha_inicio
+                    fecha_fin_parsed = parse_date(str(fecha_fin)) if not isinstance(fecha_fin, (str, type(timezone.now().date()))) else fecha_fin
+                    if not fecha_inicio_parsed or not fecha_fin_parsed:
+                        return self.error_response("El formato de las fechas es inválido. Deben ser YYYY-MM-DD.", "invalid_date_format")
+                    diferencia = relativedelta(fecha_fin_parsed, fecha_inicio_parsed)
+                    duration_months = diferencia.years * 12 + diferencia.months
+                    if duration_months < 0:
+                        return self.error_response("La fecha de fin debe ser posterior a la de inicio.", "invalid_dates")
+                    # Validate minimum duration of 6 months
+                    if duration_months < 6 or (duration_months == 6 and diferencia.days < 0):
+                        return self.error_response("La diferencia entre la fecha de inicio y fin de contrato debe ser de al menos 6 meses.", "invalid_dates")
                     human_talent = HumanTalent.objects.create(
                         enterprise=enterprise,
                         name=talento_payload.get('nombre') or talento_payload.get('name') or '',
