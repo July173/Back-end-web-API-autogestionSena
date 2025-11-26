@@ -171,6 +171,8 @@ class NotificationService:
                 'link': '',
             })
 
+
+    #----- Get Methods -----#
     #--- Get Notifications ---#
     def get_notifications(self, apprentice_id=None, instructor_id=None, coordinator_id=None, sofia_operator_id=None, admin_id=None):
         user = None
@@ -219,6 +221,62 @@ class NotificationService:
     
     #--- Get Notification by ID ---#
     def get_notification_by_id(self, notification_id):
+        notification = self.repository.get_by_id(notification_id)
+        if notification and not notification.is_read:
+            notification.is_read = True
+            notification.save(update_fields=["is_read"])
+        return notification
+    
+    
+    #--- Delete Methods ---#
+    #--- Delete Notifications ---#
+    def delete_notifications(self, apprentice_id=None, instructor_id=None, coordinator_id=None, sofia_operator_id=None, admin_id=None):
+        user = None
+        role_map = {
+            'apprentice_id': 'Aprendiz',
+            'instructor_id': 'Instructor',
+            'coordinator_id': 'Coordinador',
+            'sofia_operator_id': 'Operador de Sofia Plus',
+            'admin_id': 'Administrador',
+        }
+        if apprentice_id:
+            user = User.objects.filter(id=apprentice_id, role__type_role__iexact=role_map['apprentice_id']).first()
+            if not user:
+                raise ValueError('El usuario no es un aprendiz o no existe.')
+            qs = self.repository.delete_by_apprentice_id(apprentice_id)
+        elif instructor_id:
+            user = User.objects.filter(id=instructor_id, role__type_role__iexact=role_map['instructor_id']).first()
+            if not user:
+                raise ValueError('El usuario no es un instructor o no existe.')
+            qs = self.repository.delete_by_instructor_id(instructor_id)
+        elif coordinator_id:
+            user = User.objects.filter(id=coordinator_id, role__type_role__iexact=role_map['coordinator_id']).first()
+            if not user:
+                raise ValueError('El usuario no es un coordinador o no existe.')
+            qs = self.repository.delete_by_coordinator_id(coordinator_id)
+        elif sofia_operator_id:
+            user = User.objects.filter(id=sofia_operator_id, role__type_role__iexact=role_map['sofia_operator_id']).first()
+            if not user:
+                raise ValueError('El usuario no es un operador Sofia Plus o no existe.')
+            qs = self.repository.delete_by_sofia_operator_id(sofia_operator_id)
+        elif admin_id:
+            user = User.objects.filter(id=admin_id, role__type_role__iexact=role_map['admin_id']).first()
+            if not user:
+                raise ValueError('El usuario no es un administrador o no existe.')
+            qs = self.repository.delete_by_admin_id(admin_id)
+        else:
+            qs = self.repository.list_all()
+        # Los métodos delete_by_* devuelven la cantidad de notificaciones desactivadas (int)
+        if isinstance(qs, int):
+            if qs == 0:
+                raise ValueError('No hay notificaciones para este usuario.')
+            return qs
+        if qs is None:
+            raise ValueError('No hay notificaciones para este usuario.')
+        return qs
+    
+    #--- Delete Notification by ID ---#
+    def delete_notification_by_id(self, notification_id):
         notification = self.repository.get_by_id(notification_id)
         if notification and not notification.is_read:
             notification.is_read = True
