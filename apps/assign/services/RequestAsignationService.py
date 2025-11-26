@@ -106,21 +106,21 @@ class RequestAsignationService(BaseService):
                 'request_state': request_asignation.request_state
             }
             person, aprendiz, enterprise, boss, human_talent, modality, request_asignation, regional, center, sede = result
-            # Obtener correo del aprendiz desde User
+            # Get apprentice email
             user = User.objects.filter(person_id=getattr(person, 'id', None)).first()
             correo_aprendiz = user.email if user else None
-            # Obtener sede, centro y regional desde PersonSede
+            # Get sede, center and regional from PersonSede
             personsede = PersonSede.objects.filter(person_id=getattr(person, 'id', None)).first()
             sede_obj = personsede.sede if personsede else sede
             center_obj = sede_obj.center if sede_obj and hasattr(sede_obj, 'center') else center
             regional_obj = center_obj.regional if center_obj and hasattr(center_obj, 'regional') else regional
-            # Datos de talento humano
+            # Human talent data
             talento_humano = {
                 'nombre': getattr(human_talent, 'name', None),
                 'correo': getattr(human_talent, 'email', None),
                 'telefono': getattr(human_talent, 'phone_number', None)
             } if human_talent else None
-            # Obtener número de ficha y nombre del programa
+            # Get apprentice file number and program name
             ficha = aprendiz.ficha if hasattr(aprendiz, 'ficha') and aprendiz.ficha else None
             numero_ficha = ficha.file_number if ficha and hasattr(ficha, 'file_number') else None
             programa = ficha.program if ficha and hasattr(ficha, 'program') else None
@@ -175,8 +175,8 @@ class RequestAsignationService(BaseService):
             requests_data = []
             for person, aprendiz, enterprise, boss, human_talent, sede, modality, request_asignation in form_requests:
                 request_item = {
-                    'id': request_asignation.id,  # id de la solicitud
-                    'aprendiz_id': aprendiz.id,   # id del aprendiz
+                    'id': request_asignation.id,  
+                    'aprendiz_id': aprendiz.id,   
                     'nombre': f"{getattr(person, 'first_name', '')} {getattr(person, 'first_last_name', '')} {getattr(person, 'second_last_name', '')}",
                     'tipo_identificacion': getattr(person, 'type_identification_id', None),
                     'numero_identificacion': getattr(person, 'number_identification', None),
@@ -209,8 +209,6 @@ class RequestAsignationService(BaseService):
             
             
             aprendiz = Apprentice.objects.select_related('person', 'ficha').get(pk=aprendiz_id)
-            # Buscar la solicitud más reciente del aprendiz
-            # Boss es una relación 1:N (Boss.enterprise FK) -> usar prefetch_related para traer bosses
             latest_request = RequestAsignation.objects.filter(
                 apprentice=aprendiz
             ).select_related(
@@ -281,12 +279,13 @@ class RequestAsignationService(BaseService):
             else:
                 fecha_fin_parsed = fecha_fin
 
-            # If both dates provided, validate ordering and minimal 6 months difference
-            if fecha_inicio_parsed and fecha_fin_parsed:
+            if fecha_inicio_parsed is not None and fecha_fin_parsed is not None:
+                if fecha_inicio_parsed > fecha_fin_parsed:
+                    return self.error_response("La fecha de inicio no puede ser mayor que la fecha de fin de contrato.", "invalid_dates")
                 diferencia = relativedelta(fecha_fin_parsed, fecha_inicio_parsed)
                 meses = diferencia.years * 12 + diferencia.months
-                if meses < 6 or (meses == 6 and diferencia.days < 0):
-                    return self.error_response("La diferencia entre la fecha de inicio y fin de contrato debe ser de al menos 6 meses.", "invalid_dates")
+                if meses > 0 or diferencia.days > 0:
+                    return self.error_response("No debe haber meses de diferencia entre la fecha de inicio y fin de contrato.", "invalid_dates")
 
             # Apply updates
             updated = False
@@ -308,7 +307,7 @@ class RequestAsignationService(BaseService):
 
             if updated:
                 req.save()
-                # Crear mensaje asociado a la actualización
+                # Create a message log for the update
                 if content:
                     MessageRepository().create(req, " | ".join(content), "ACTUALIZACION")
 
@@ -337,7 +336,7 @@ class RequestAsignationService(BaseService):
         Crea o usa entidades según 'id' y crea la solicitud en una transacción.
         """
         try:
-            # --- Extraer y validar datos antes de crear cualquier objeto ---
+            # --- Extract and validate data before creating any object ---
             empresa_payload = package_data.get('empresa') or package_data.get('enterprise') or package_data.get('company') or {}
             jefe_payload = package_data.get('jefe') or package_data.get('boss') or {}
             talento_payload = package_data.get('talentoHumano') or package_data.get('human_talent') or {}
@@ -355,27 +354,27 @@ class RequestAsignationService(BaseService):
             if not apprentice_id:
                 return self.error_response('El campo solicitud.apprentice es requerido', 'missing_apprentice')
 
-            # Validar existencia de entidades relacionadas antes de crear nada
+            # Validate existence of related entities before creating anything
             apprentice = Apprentice.objects.get(pk=apprentice_id)
 
             ficha = None
             if ficha_id:
                 ficha = Ficha.objects.get(pk=ficha_id)
 
-            # Normalizar 'sede_id': aceptar pk (int/str) o nombre parcial
+            # Normalize 'sede_id': accept pk (int/str) or partial name
             sede = None
             if sede_id is not None:
                 try:
-                    # primero intentar como PK
+                    # first try as PK
                     sede = Sede.objects.get(pk=int(sede_id))
                 except Exception:
-                    # intentar buscar por nombre parcial
+                    # try to find by partial name
                     sede = Sede.objects.filter(name__icontains=str(sede_id).split('(')[0].strip()).first()
                     if not sede:
                         logger.debug(f"No se encontró sede por nombre: {sede_id}")
                         return self.error_response(f"No se encontró la sede: {sede_id}", 'not_found')
                 logger.debug(f"sede resuelta: {getattr(sede, 'id', None)} tipo={type(sede)} nombre={getattr(sede,'name',None)}")
-            # Validación estricta: asegurar que `sede` sea instancia de Sede si se resolvió
+            # Strict validation: ensure `sede` is an instance of Sede if resolved
             if sede is not None and not isinstance(sede, Sede):
                 logger.error(f"Valor de 'sede' no es instancia de Sede tras normalizar: valor={sede} tipo={type(sede)}")
                 return self.error_response(f"Sede inválida: {sede}", 'invalid_sede')
@@ -384,22 +383,22 @@ class RequestAsignationService(BaseService):
             if modality_id:
                 modality = ModalityProductiveStage.objects.get(pk=modality_id)
 
-            # Validar modalidad y duración
-            duracion_meses = 6
-            if fecha_inicio and fecha_fin:
-                diferencia = relativedelta(fecha_fin, fecha_inicio)
-                duracion_meses = diferencia.years * 12 + diferencia.months
-                if duracion_meses < 0:
+            # Validate modality and duration
+            duration_months = 6
+            if start_date and end_date:
+                difference = relativedelta(end_date, start_date)
+                duration_months = difference.years * 12 + difference.months
+                if duration_months < 0:
                     return self.error_response("La fecha de fin debe ser posterior a la de inicio.", "invalid_dates")
 
             try:
-                self._validar_solicitud(apprentice_id, ficha_id, modality_id, duracion_meses)
+                self._validar_solicitud(apprentice_id, ficha_id, modality_id, duration_months)
             except Exception as e:
                 return self.error_response(str(e), 'validation')
 
-            # --- Si todo es válido, crear objetos dentro de la transacción ---
+            # --- If everything is valid, create objects within the transaction ---
             with transaction.atomic():
-                # Empresa
+                # enterprise
                 if empresa_payload.get('id'):
                     enterprise = Enterprise.objects.get(pk=empresa_payload.get('id'))
                 else:
@@ -437,14 +436,14 @@ class RequestAsignationService(BaseService):
                         phone_number=talento_payload.get('telefono') or talento_payload.get('phone') or 0
                     )
 
-                # Actualizar ficha del aprendiz si corresponde
+                # Update apprentice record if provided
                 if ficha_id:
                     apprentice.ficha = ficha
                     apprentice.save()
 
                 request_date_value = fecha_inicio if fecha_inicio else timezone.now().date()
 
-                # Determinar fecha de fin por defecto (6 meses desde la fecha de inicio o request_date)
+                # Determine default end date (6 months from start date or request_date)
                 if fecha_fin:
                     fecha_fin_value = fecha_fin
                 else:
@@ -463,18 +462,18 @@ class RequestAsignationService(BaseService):
                     request_state=RequestState.SIN_ASIGNAR
                 )
 
-                # Actualizar PersonSede si se proporcionó sede
+                
                 if sede:
                     try:
                         person = apprentice.person
                         logger.debug(f"apprentice.person valor={person} tipo={type(person)}")
-                        # Asegurar que 'person' sea instancia de Person
+                        # Ensure 'person' is an instance of Person
                         if not isinstance(person, Person):
                             person = Person.objects.get(pk=getattr(apprentice, 'person_id', None))
                             logger.debug(f"person resuelto por id: {person} tipo={type(person)}")
 
-                        # Usar person_id en la búsqueda para evitar pasar un objeto incorrecto
-                        # Usar sede_id en defaults para evitar pasar instancias/strings ambiguos
+                        # Use getattr para evitar errores si person_id no existe
+                        # Use update_or_create para manejar ambos casos
                         PersonSede.objects.update_or_create(
                             person_id=getattr(apprentice, 'person_id', None),
                             defaults={"sede_id": sede.id if sede else None}
@@ -483,7 +482,7 @@ class RequestAsignationService(BaseService):
                         logger.exception("Error actualizando PersonSede")
                         return self.error_response(f"Error al actualizar PersonSede: {e}", 'person_sede_error')
 
-                # Notificar a los coordinadores de la sede y ficha del aprendiz (centralizado)
+                # Notificate the apprentice about the created request
                 notification_service = NotificationService()
                 ficha_obj = apprentice.ficha
                 sede_obj = sede if sede else None
@@ -517,7 +516,7 @@ class RequestAsignationService(BaseService):
             return self.error_response('Modalidad no encontrada', 'not_found')
         except Exception as e:
             try:
-                # Intentar registrar tipos de variables claves para depuración
+                # Try to capture relevant local variables for debugging
                 debug_info = {
                     'apprentice_id': locals().get('apprentice_id'),
                     'apprentice_person': str(type(locals().get('apprentice').person)) if locals().get('apprentice', None) and hasattr(locals().get('apprentice'), 'person') else str(type(locals().get('apprentice', None))),
@@ -538,19 +537,19 @@ class RequestAsignationService(BaseService):
         """
         
         solicitudes = RequestAsignation.objects.filter(apprentice_id=aprendiz_id)
-        # Estados que NO cuentan como activas
+        # States that do NOT count as active
         inactivos = ['RECHAZADA', 'FINALIZADA']
         activas = solicitudes.exclude(request_state__in=inactivos)
 
-        # A. Máximo 2 solicitudes activas
+        # A. Maximum 2 active requests
         if activas.count() >= 2:
             raise ValidationError("Solo puedes tener máximo dos solicitudes activas.")
 
-        # B. Misma ficha
+        # B. Same ficha
         if ficha_id and activas.filter(apprentice__ficha_id=ficha_id).exists():
             raise ValidationError("Ya tienes una solicitud activa con esta ficha.")
 
-        # C. Modalidad contrato
+        # C. Modality Contract 
         contrato_nombre = "CONTRATO_APRENDIZAJE"
         modalidad_obj = ModalityProductiveStage.objects.get(pk=modalidad_id) if modalidad_id else None
         if modalidad_obj and modalidad_obj.name_modality.upper().replace(' ', '_') == contrato_nombre:
