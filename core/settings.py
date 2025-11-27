@@ -181,6 +181,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS
 # ============================
 CORS_ALLOWED_ORIGINS = [
+    "http://167.114.98.199",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
     "http://localhost:3000",
@@ -196,6 +197,7 @@ CORS_ALLOW_CREDENTIALS = True
 # CSRF and session cookie settings helpful in local dev for cross-origin requests
 # Note: In production you should set SECURE flags and tighten origins accordingly.
 CSRF_TRUSTED_ORIGINS = [
+    "http://167.114.98.199",
     'http://localhost:8080',
     'http://127.0.0.1:8080',
     'http://localhost:5173',
