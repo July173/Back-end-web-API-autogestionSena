@@ -188,6 +188,14 @@ class RequestAsignationService(BaseService):
             form_requests = self.repository.get_all_form_requests()
             requests_data = []
             for person, aprendiz, enterprise, boss, human_talent, sede, modality, request_asignation in form_requests:
+                # Buscar instructor asignado a la solicitud (si existe)
+                instructor_name = None
+                asignation = getattr(request_asignation, 'asignation_instructor', None)
+                if asignation:
+                    instructor = getattr(asignation, 'instructor', None)
+                    if instructor and hasattr(instructor, 'person'):
+                        p = instructor.person
+                        instructor_name = f"{getattr(p, 'first_name', '')} {getattr(p, 'first_last_name', '')} {getattr(p, 'second_last_name', '')}".strip()
                 request_item = {
                     'id': request_asignation.id,  
                     'aprendiz_id': aprendiz.id,   
@@ -198,7 +206,8 @@ class RequestAsignationService(BaseService):
                     'request_state': request_asignation.request_state,
                     'nombre_modalidad': getattr(modality, 'name_modality', None) if modality else None,
                     'boss': boss.name_boss if boss else None,
-                    'human_talent': human_talent.name if human_talent else None
+                    'human_talent': human_talent.name if human_talent else None,
+                    'instructor': instructor_name
                 }
                 requests_data.append(request_item)
             logger.info(f"Se encontraron {len(requests_data)} solicitudes")
