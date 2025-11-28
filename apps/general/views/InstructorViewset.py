@@ -216,6 +216,13 @@ class InstructorViewset(BaseViewSet):
     @swagger_auto_schema(
         operation_description="Filtra instructores por nombre, número de documento y área de conocimiento.",
         manual_parameters=[
+                        openapi.Parameter(
+                            'program_name',
+                            openapi.IN_QUERY,
+                            description="Nombre (o parte) del programa a filtrar (opcional)",
+                            type=openapi.TYPE_STRING,
+                            required=False
+                        ),
             openapi.Parameter('search', openapi.IN_QUERY, description="Buscar por nombre o número de documento", type=openapi.TYPE_STRING),
             openapi.Parameter('knowledge_area_id', openapi.IN_QUERY, description="Filtrar por área de conocimiento (ID)", type=openapi.TYPE_INTEGER),
             openapi.Parameter('is_followup_instructor', openapi.IN_QUERY, description="Filtrar instructores: 'all' (todos), 'true' (solo seguimiento), 'false' (solo no seguimiento)", type=openapi.TYPE_STRING, enum=['all','true','false']),
@@ -274,6 +281,13 @@ class InstructorViewset(BaseViewSet):
                 description="Nombre (o parte) de la modalidad a filtrar (opcional)",
                 type=openapi.TYPE_STRING,
                 required=False
+            ),
+            openapi.Parameter(
+                'program_name',
+                openapi.IN_QUERY,
+                description="Nombre (o parte) del programa a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
+                required=False
             )
         ],
         responses={200: openapi.Response("Lista de asignaciones", 
@@ -285,6 +299,7 @@ class InstructorViewset(BaseViewSet):
     )
     @action(detail=True, methods=['get'], url_path='asignations')
     def asignations(self, request, pk=None):
+        program_name = request.query_params.get('program_name')
         """
         Endpoint para obtener todas las asignaciones de un instructor específico.
         Si se proporciona 'asignation_id' como parámetro de query string, filtra por esa asignación.
@@ -308,6 +323,10 @@ class InstructorViewset(BaseViewSet):
         if modality_name:
             asignaciones = asignaciones.filter(
                 request_asignation__modality_productive_stage__name_modality__icontains=modality_name
+            )
+        if program_name:
+            asignaciones = asignaciones.filter(
+                request_asignation__apprentice__ficha__program__name__icontains=program_name
             )
         serializer = AsignationInstructorWithMessageSerializer(asignaciones, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
