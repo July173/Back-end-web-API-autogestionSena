@@ -216,6 +216,13 @@ class InstructorViewset(BaseViewSet):
     @swagger_auto_schema(
         operation_description="Filtra instructores por nombre, número de documento y área de conocimiento.",
         manual_parameters=[
+                                    openapi.Parameter(
+                                        'request_state',
+                                        openapi.IN_QUERY,
+                                        description="Estado de la solicitud a filtrar (opcional)",
+                                        type=openapi.TYPE_STRING,
+                                        required=False
+                                    ),
                         openapi.Parameter(
                             'program_name',
                             openapi.IN_QUERY,
@@ -288,6 +295,13 @@ class InstructorViewset(BaseViewSet):
                 description="Nombre (o parte) del programa a filtrar (opcional)",
                 type=openapi.TYPE_STRING,
                 required=False
+            ),
+            openapi.Parameter(
+                'request_state',
+                openapi.IN_QUERY,
+                description="Estado de la solicitud a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
+                required=False
             )
         ],
         responses={200: openapi.Response("Lista de asignaciones", 
@@ -300,6 +314,7 @@ class InstructorViewset(BaseViewSet):
     @action(detail=True, methods=['get'], url_path='asignations')
     def asignations(self, request, pk=None):
         program_name = request.query_params.get('program_name')
+        request_state = request.query_params.get('request_state')
         """
         Endpoint para obtener todas las asignaciones de un instructor específico.
         Si se proporciona 'asignation_id' como parámetro de query string, filtra por esa asignación.
@@ -327,6 +342,10 @@ class InstructorViewset(BaseViewSet):
         if program_name:
             asignaciones = asignaciones.filter(
                 request_asignation__apprentice__ficha__program__name__icontains=program_name
+            )
+        if request_state:
+            asignaciones = asignaciones.filter(
+                request_asignation__request_state=request_state
             )
         serializer = AsignationInstructorWithMessageSerializer(asignaciones, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
