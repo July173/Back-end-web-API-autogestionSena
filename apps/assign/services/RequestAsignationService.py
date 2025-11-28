@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class RequestAsignationService(BaseService):
+ 
 
     
 
@@ -567,5 +568,22 @@ class RequestAsignationService(BaseService):
         if modalidad_obj and modalidad_obj.name_modality.upper().replace(' ', '_') == contrato_nombre:
             if activas.filter(modality_productive_stage__name_modality__iexact=modalidad_obj.name_modality).exists():
                 raise ValidationError("Solo puedes tener un contrato de aprendizaje activo.")
-
         return True
+    
+    
+    
+    def get_request_messages_by_request_id(self, request_id):
+        """
+        Devuelve todos los mensajes asociados a una solicitud de asignación por su ID.
+        """
+        try:
+            messages = MessageRepository().get().filter(request_asignation_id=request_id)
+            from apps.assign.entity.serializers.MessageSerializer import MessageSerializer
+            serializer = MessageSerializer(messages, many=True)
+            return {
+                'success': True,
+                'count': len(serializer.data),
+                'data': serializer.data
+            }
+        except Exception as e:
+            return self.error_response(f"Error al obtener los mensajes: {e}", "get_request_messages_by_request_id")

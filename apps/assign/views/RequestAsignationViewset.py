@@ -16,6 +16,7 @@ from apps.assign.entity.serializers.form.FormRequestSerializer import FormReques
 from apps.assign.entity.serializers.form.CombinedFormRequestSerializer import CombinedFormRequestSerializer
 
 class RequestAsignationViewset(BaseViewSet):
+    
     service_class = RequestAsignationService
     serializer_class = RequestAsignationSerializer
     parser_classes = [JSONParser, MultiPartParser, FormParser]
@@ -317,3 +318,24 @@ class RequestAsignationViewset(BaseViewSet):
             return Response(result, status=status.HTTP_200_OK)
         else:
             return Response(result, status=status.HTTP_404_NOT_FOUND)
+    
+    
+    #--- Get Messages by RequestAsignation ID -------
+    @swagger_auto_schema(
+        operation_description="Obtiene todos los mensajes asociados a una solicitud de asignación por su ID.",
+        tags=["FormRequest"],
+        responses={
+            200: openapi.Response("Lista de mensajes obtenida exitosamente."),
+            404: openapi.Response("No se encontraron mensajes para la solicitud indicada.")
+        }
+    )
+    @action(detail=True, methods=['get'], url_path='messages')
+    def get_request_messages(self, request, pk=None):
+        result = self.service_class().get_request_messages_by_request_id(pk)
+        if result.get('success') and result.get('count', 0) > 0:
+            return Response(result, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'success': False,
+                'message': 'No se encontraron mensajes para la solicitud indicada.'
+            }, status=status.HTTP_404_NOT_FOUND)
