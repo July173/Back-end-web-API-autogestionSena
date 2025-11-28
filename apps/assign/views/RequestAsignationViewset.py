@@ -156,8 +156,21 @@ class RequestAsignationViewset(BaseViewSet):
         request_state = request.data.get('request_state')
         fecha_inicio = request.data.get('fecha_inicio_contrato') or request.data.get('contract_start_date')
         fecha_fin = request.data.get('fecha_fin_contrato') or request.data.get('contract_end_date')
+        
+        # Recibir los datos del mensaje desde el frontend
+        content = request.data.get('content')
+        type_message = request.data.get('type_message')
+        whose_message = request.data.get('whose_message')
 
-        result = self.service_class().update_request_state(pk, request_state, fecha_inicio, fecha_fin)
+        result = self.service_class().update_request_state(
+            pk, 
+            request_state, 
+            fecha_inicio, 
+            fecha_fin,
+            content=content,
+            type_message=type_message,
+            whose_message=whose_message
+        )
         if result.get('success'):
             return Response(result, status=status.HTTP_200_OK)
         # Map not_found to 404, validation errors to 400 otherwise 500
