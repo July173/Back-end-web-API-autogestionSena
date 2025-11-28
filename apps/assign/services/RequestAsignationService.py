@@ -19,7 +19,7 @@ from django.utils import timezone
 from apps.assign.entity.serializers.form.RequestAsignationDashboardSerializer import RequestAsignationDashboardSerializer
 from apps.general.services.NotificationService import NotificationService
 from apps.assign.repositories.MessageRepository import MessageRepository
-
+from apps.assign.entity.models import AsignationInstructor
 
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,10 @@ class RequestAsignationService(BaseService):
             request.request_state = RequestState.RECHAZADO
             request.rejectionMessage = rejection_message
             request.save()
+            # Eliminar la asignación del aprendiz al instructor si existe
+            asignation = AsignationInstructor.objects.filter(request_asignation=request).first()
+            if asignation:
+                asignation.delete()
             apprentice = request.apprentice
             person = apprentice.person
             nombre_aprendiz = f"{person.first_name} {person.first_last_name}"
