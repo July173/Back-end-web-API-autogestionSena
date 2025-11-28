@@ -262,9 +262,11 @@ class RequestAsignationService(BaseService):
             return self.error_response(f"Error al filtrar solicitudes: {e}", "filter_form_requests")
 
 
-    def update_request_state(self, request_id, request_state=None, fecha_inicio=None, fecha_fin=None):
+    def update_request_state(self, request_id, request_state=None, fecha_inicio=None, fecha_fin=None, content=None, type_message=None, whose_message=None):
         """
         Update the request_asignation state and optionally the start/end dates.
+        If content, type_message and whose_message are provided from frontend, use them.
+        Otherwise, generate automatic message for backward compatibility.
         Returns a dict with the same structure as other service methods.
         """
         try:
@@ -291,27 +293,35 @@ class RequestAsignationService(BaseService):
 
             # Apply updates
             updated = False
-            content = []
+            auto_message_parts = []
+            
             if request_state is not None:
                 req.request_state = request_state
                 updated = True
-                content.append(f"Estado actualizado a: {request_state}")
+                auto_message_parts.append(f"Estado actualizado a: {request_state}")
 
             if fecha_inicio_parsed is not None:
                 req.date_start_production_stage = fecha_inicio_parsed
                 updated = True
-                content.append(f"Fecha de inicio actualizada a: {fecha_inicio_parsed}")
+                auto_message_parts.append(f"Fecha de inicio actualizada a: {fecha_inicio_parsed}")
 
             if fecha_fin_parsed is not None:
                 req.date_end_production_stage = fecha_fin_parsed
                 updated = True
-                content.append(f"Fecha de fin actualizada a: {fecha_fin_parsed}")
+                auto_message_parts.append(f"Fecha de fin actualizada a: {fecha_fin_parsed}")
 
             if updated:
                 req.save()
-                # Create a message log for the update
-                if content:
-                    MessageRepository().create(req, " | ".join(content), "ACTUALIZACION")
+                
+                # Create message: prioritize frontend-provided message, fallback to auto-generated
+                if content and type_message:
+                    # Use message data from frontend (instructor valuation message)
+                    message_type = type_message if type_message else "ACTUALIZACION"
+                    message_whose = whose_message if whose_message else "INSTRUCTOR"
+                    MessageRepository().create(req, content, message_type, message_whose)
+                elif auto_message_parts:
+                    # Fallback: generate automatic message (for backward compatibility)
+                    MessageRepository().create(req, " | ".join(auto_message_parts), "ACTUALIZACION")
 
             return {
                 'success': True,
