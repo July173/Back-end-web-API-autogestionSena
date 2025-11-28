@@ -298,6 +298,10 @@ class RequestAsignationService(BaseService):
             if fecha_inicio_parsed is not None and fecha_fin_parsed is not None:
                 if fecha_inicio_parsed > fecha_fin_parsed:
                     return self.error_response("La fecha de inicio no puede ser mayor que la fecha de fin de contrato.", "invalid_dates")
+                diferencia = relativedelta(fecha_fin_parsed, fecha_inicio_parsed)
+                meses = diferencia.years * 12 + diferencia.months
+                if meses > 7 or (meses == 7 and diferencia.days > 0):
+                    return self.error_response("No debe haber más de 7 meses de diferencia entre la fecha de inicio y fin de contrato.", "invalid_dates")
 
             # Apply updates
             updated = False
