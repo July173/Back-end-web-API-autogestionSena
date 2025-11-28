@@ -11,12 +11,15 @@ from apps.assign.entity.serializers.AsignationInstructor.AsignationInstructorAll
 from apps.assign.entity.serializers.AsignationInstructor.AsignationInstructorWithNamesSerializer import AsignationInstructorWithNamesSerializer, PersonBasicSerializer
 from apps.general.entity.models import Instructor
 from apps.general.entity.serializers.CreateInstructor.InstructorSerializer import InstructorSerializer
-from apps.security.entity.models import Person
+from apps.assign.entity.serializers.AsignationInstructor.AsignationInstructorFullDataSerializer import AsignationInstructorFullDataSerializer
+
+
 
 class AsignationInstructorViewset(BaseViewSet):
+
     service_class = AsignationInstructorService
     serializer_class = AsignationInstructorSerializer
-    
+
     #-- Get --
     @swagger_auto_schema(
         operation_description="Obtiene una lista de todas las asignaciones de instructor.",
@@ -88,7 +91,6 @@ class AsignationInstructorViewset(BaseViewSet):
             status=status.HTTP_404_NOT_FOUND
         )
 
-
     #-- Custom Create --
     @swagger_auto_schema(
         method='post',
@@ -114,7 +116,7 @@ class AsignationInstructorViewset(BaseViewSet):
         result = service.create_custom(instructor_id, request_asignation_id, content=content, type_message=type_message, whose_message=whose_message, request_state=request_state)
         if isinstance(result, dict) and result.get('status') == 'error':
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
-        
+
         instructor = Instructor.objects.get(pk=instructor_id)
         instructor_data = InstructorSerializer(instructor).data
         serializer = self.serializer_class(result)
@@ -172,3 +174,24 @@ class AsignationInstructorViewset(BaseViewSet):
         serializer = AsignationInstructorWithNamesSerializer(data)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+#-- Get full data for asignation (apprentice, instructor, asignation) --
+    @swagger_auto_schema(
+        method='get',
+        operation_description="Obtiene los datos del aprendiz, instructor y la asignación para una asignación específica.",
+        manual_parameters=[
+            openapi.Parameter('id', openapi.IN_QUERY, description="ID de la asignación", type=openapi.TYPE_INTEGER, required=True)
+        ],
+        responses={200: openapi.Response("OK")},
+        tags=["AsignationInstructor"]
+    )
+    @action(detail=False, methods=['get'], url_path='full-data')
+    def full_data(self, request):
+        asignation_id = request.query_params.get('id')
+        if not asignation_id:
+            return Response({'detail': 'El parámetro id es requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        service = self.service_class()
+        data = service.get_full_data(asignation_id)
+        if not data:
+            return Response({'success': False, 'message': 'No se encontró la asignación activa.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = AsignationInstructorFullDataSerializer(data)
+        return Response({'success': True, 'data': serializer.data}, status=status.HTTP_200_OK)
