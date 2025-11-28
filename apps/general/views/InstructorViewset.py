@@ -244,7 +244,7 @@ class InstructorViewset(BaseViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        operation_description="Lista todas las asignaciones de un instructor, incluyendo datos del aprendiz y la solicitud. Si se proporciona 'asignation_id' como parámetro de query string, filtra por esa asignación.",
+        operation_description="Lista todas las asignaciones de un instructor, incluyendo datos del aprendiz y la solicitud. Si se proporciona 'asignation_id' o 'apprentice_name' como parámetros de query string, filtra por esos valores.",
         tags=["Instructor"],
         manual_parameters=[
             openapi.Parameter(
@@ -252,6 +252,13 @@ class InstructorViewset(BaseViewSet):
                 openapi.IN_QUERY,
                 description="ID de la asignación específica a filtrar (opcional)",
                 type=openapi.TYPE_INTEGER,
+                required=False
+            ),
+            openapi.Parameter(
+                'apprentice_name',
+                openapi.IN_QUERY,
+                description="Nombre (o parte) del aprendiz a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
                 required=False
             )
         ],
@@ -270,9 +277,14 @@ class InstructorViewset(BaseViewSet):
         """
         service = InstructorService()
         asignation_id = request.query_params.get('asignation_id')
+        apprentice_name = request.query_params.get('apprentice_name')
+        asignaciones = service.get_asignations(pk)
         if asignation_id:
-            asignaciones = service.get_asignations(pk).filter(id=asignation_id)
-        else:
-            asignaciones = service.get_asignations(pk)
+            asignaciones = asignaciones.filter(id=asignation_id)
+        if apprentice_name:
+            # Filtra por nombre del aprendiz (parcial, insensible a mayúsculas)
+            asignaciones = asignaciones.filter(
+                request_asignation__apprentice__person__first_name__icontains=apprentice_name
+            )
         serializer = AsignationInstructorWithMessageSerializer(asignaciones, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
