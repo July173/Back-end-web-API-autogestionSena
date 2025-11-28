@@ -260,6 +260,13 @@ class InstructorViewset(BaseViewSet):
                 description="Nombre (o parte) del aprendiz a filtrar (opcional)",
                 type=openapi.TYPE_STRING,
                 required=False
+            ),
+            openapi.Parameter(
+                'apprentice_id_number',
+                openapi.IN_QUERY,
+                description="Número de identificación del aprendiz a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
+                required=False
             )
         ],
         responses={200: openapi.Response("Lista de asignaciones", 
@@ -278,13 +285,17 @@ class InstructorViewset(BaseViewSet):
         service = InstructorService()
         asignation_id = request.query_params.get('asignation_id')
         apprentice_name = request.query_params.get('apprentice_name')
+        apprentice_id_number = request.query_params.get('apprentice_id_number')
         asignaciones = service.get_asignations(pk)
         if asignation_id:
             asignaciones = asignaciones.filter(id=asignation_id)
         if apprentice_name:
-            # Filtra por nombre del aprendiz (parcial, insensible a mayúsculas)
             asignaciones = asignaciones.filter(
                 request_asignation__apprentice__person__first_name__icontains=apprentice_name
+            )
+        if apprentice_id_number:
+            asignaciones = asignaciones.filter(
+                request_asignation__apprentice__person__number_identification=apprentice_id_number
             )
         serializer = AsignationInstructorWithMessageSerializer(asignaciones, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
