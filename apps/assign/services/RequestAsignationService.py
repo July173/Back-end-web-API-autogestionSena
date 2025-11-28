@@ -19,7 +19,7 @@ from django.utils import timezone
 from apps.assign.entity.serializers.form.RequestAsignationDashboardSerializer import RequestAsignationDashboardSerializer
 from apps.general.services.NotificationService import NotificationService
 from apps.assign.repositories.MessageRepository import MessageRepository
-
+from apps.assign.entity.models import AsignationInstructor
 
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,17 @@ class RequestAsignationService(BaseService):
             return self.error_response(f"Error al obtener PDF: {e}", "get_pdf_url")
 
     def reject_request(self, request_id, rejection_message):
+        # Disable the learner assignment to the instructor if it exists and update assigned_learners
+        asignation = AsignationInstructor.objects.filter(request_asignation=request, active=True).first()
+        if asignation:
+            asignation.active = False
+            asignation.delete_at = timezone.now()
+            asignation.save()
+            # Disminuir el contador de aprendices asignados al instructor
+            instructor = asignation.instructor
+            if hasattr(instructor, 'assigned_learners') and instructor.assigned_learners and instructor.assigned_learners > 0:
+                instructor.assigned_learners -= 1
+                instructor.save()
         try:
             request = RequestAsignation.objects.get(pk=request_id)
             request.request_state = RequestState.RECHAZADO
