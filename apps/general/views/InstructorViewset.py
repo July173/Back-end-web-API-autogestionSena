@@ -244,8 +244,17 @@ class InstructorViewset(BaseViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        operation_description="Lista todas las asignaciones de un instructor, incluyendo datos del aprendiz y la solicitud.",
+        operation_description="Lista todas las asignaciones de un instructor, incluyendo datos del aprendiz y la solicitud. Si se proporciona 'asignation_id' como parámetro de query string, filtra por esa asignación.",
         tags=["Instructor"],
+        manual_parameters=[
+            openapi.Parameter(
+                'asignation_id',
+                openapi.IN_QUERY,
+                description="ID de la asignación específica a filtrar (opcional)",
+                type=openapi.TYPE_INTEGER,
+                required=False
+            )
+        ],
         responses={200: openapi.Response("Lista de asignaciones", 
             schema=openapi.Schema(
                 type=openapi.TYPE_ARRAY,
@@ -257,8 +266,13 @@ class InstructorViewset(BaseViewSet):
     def asignations(self, request, pk=None):
         """
         Endpoint para obtener todas las asignaciones de un instructor específico.
+        Si se proporciona 'asignation_id' como parámetro de query string, filtra por esa asignación.
         """
         service = InstructorService()
-        asignaciones = service.get_asignations(pk)
+        asignation_id = request.query_params.get('asignation_id')
+        if asignation_id:
+            asignaciones = service.get_asignations(pk).filter(id=asignation_id)
+        else:
+            asignaciones = service.get_asignations(pk)
         serializer = AsignationInstructorWithMessageSerializer(asignaciones, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
