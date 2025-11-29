@@ -74,7 +74,9 @@ class RoleFormPermissionService(BaseService):
             active=data.get('active', True)
         )
         total_created = 0
-        for form_perm in data.get('formularios', []):
+        # Buscar 'forms' o 'formularios' para compatibilidad con frontend y serializer
+        forms_list = data.get('forms') or data.get('formularios') or []
+        for form_perm in forms_list:
             form_id = form_perm.get('form_id')
             permission_ids = form_perm.get('permission_ids', [])
             form = Form.objects.get(pk=form_id)

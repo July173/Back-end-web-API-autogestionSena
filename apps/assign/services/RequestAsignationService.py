@@ -656,3 +656,91 @@ class RequestAsignationService(BaseService):
             }
         except Exception as e:
             return self.error_response(f"Error al obtener los mensajes: {e}", "get_request_messages_by_request_id")
+    
+    
+    def get_operator_sofia_dashboard(self):
+        """
+        Obtiene estadísticas del dashboard para el operador de SOFÍA Plus.
+        Retorna la evolución mensual de solicitudes registradas y pendientes.
+        
+        Filtra solicitudes:
+        - Estado: ASIGNADO
+        - Modalidad: diferente a "Contrato de Aprendizaje"
+        
+        Cuenta:
+        - Registradas: tienen mensaje con whose_message = 'OPERADOR'
+        - Pendientes: NO tienen mensaje con whose_message = 'OPERADOR'
+        """
+        try:
+            from datetime import datetime
+            from django.db.models import Count, Q
+            from apps.assign.entity.models import Message
+            
+            current_year = datetime.now().year
+            
+            # Obtener todas las solicitudes ASIGNADAS del año actual
+            requests = RequestAsignation.objects.filter(
+                request_state=RequestState.ASIGNADO,
+                request_date__year=current_year
+            ).select_related('modality_productive_stage')
+            
+            # Excluir "Contrato de Aprendizaje"
+            requests = requests.exclude(
+                Q(modality_productive_stage__name_modality__icontains='contrato') &
+                (Q(modality_productive_stage__name_modality__icontains='aprendizaje') |
+                 Q(modality_productive_stage__name_modality__icontains='aprendiz'))
+            )
+            
+            # Inicializar datos por mes (enero a diciembre)
+            monthly_data = []
+            month_names = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+            
+            for month_num in range(1, 13):
+                # Filtrar solicitudes del mes
+                month_requests = requests.filter(request_date__month=month_num)
+                
+                # Contar registradas (tienen mensaje de OPERADOR)
+                registered_count = 0
+                pending_count = 0
+                
+                for req in month_requests:
+                    # Verificar si tiene mensaje de OPERADOR
+                    has_operator_msg = Message.objects.filter(
+                        request_asignation=req,
+                        whose_message='OPERADOR'
+                    ).exists()
+                    
+                    if has_operator_msg:
+                        registered_count += 1
+                    else:
+                        pending_count += 1
+                
+                monthly_data.append({
+                    'month': month_names[month_num - 1],
+                    'month_number': month_num,
+                    'registered': registered_count,
+                    'pending': pending_count,
+                    'total': registered_count + pending_count
+                })
+            
+            # Calcular totales
+            total_registered = sum(m['registered'] for m in monthly_data)
+            total_pending = sum(m['pending'] for m in monthly_data)
+            
+            return {
+                'success': True,
+                'message': 'Dashboard del operador obtenido correctamente',
+                'data': {
+                    'year': current_year,
+                    'monthly_data': monthly_data,
+                    'totals': {
+                        'registered': total_registered,
+                        'pending': total_pending,
+                        'total': total_registered + total_pending
+                    }
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error al obtener dashboard del operador: {str(e)}")
+            return self.error_response(f"Error al obtener dashboard del operador: {str(e)}", "operator_dashboard_error")

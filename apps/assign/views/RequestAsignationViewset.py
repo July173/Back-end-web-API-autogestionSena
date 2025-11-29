@@ -339,3 +339,21 @@ class RequestAsignationViewset(BaseViewSet):
                 'success': False,
                 'message': 'No se encontraron mensajes para la solicitud indicada.'
             }, status=status.HTTP_404_NOT_FOUND)
+    
+    
+    #--- Operator SOFÍA Dashboard -------
+    @swagger_auto_schema(
+        operation_description="Obtiene estadísticas del dashboard para el operador de SOFÍA Plus (evolución mensual de registros).",
+        tags=["Dashboard"],
+        responses={
+            200: openapi.Response("Dashboard del operador obtenido exitosamente"),
+            500: openapi.Response("Error al obtener el dashboard")
+        }
+    )
+    @action(detail=False, methods=['get'], url_path='operator-sofia-dashboard')
+    def operator_sofia_dashboard(self, request):
+        result = self.service_class().get_operator_sofia_dashboard()
+        if result.get('success'):
+            return Response(result, status=status.HTTP_200_OK)
+        else:
+            return Response(result, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
