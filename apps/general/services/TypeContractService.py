@@ -1,6 +1,7 @@
 from core.base.services.implements.baseService.BaseService import BaseService
 from apps.general.repositories.TypeContractRepository import TypeContractRepository
 from apps.general.entity.models.TypeContract import TypeContract
+from apps.general.entity.serializers.TypeContractSerializer import TypeContractSerializer
 
 
 
@@ -26,7 +27,7 @@ class TypeContractService(BaseService):
         exists = TypeContract.objects.filter(name__iexact=name, delete_at__isnull=True).exists()
         if exists:
             return None, "Ya existe un tipo de contrato con ese nombre."
-        serializer = self.repository.get_serializer()(data=validated_data)
+        serializer = TypeContractSerializer(data=validated_data)
         if serializer.is_valid():
             instance = serializer.save()
             return instance, None
