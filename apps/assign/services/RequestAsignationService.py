@@ -20,6 +20,7 @@ from apps.assign.entity.serializers.form.RequestAsignationDashboardSerializer im
 from apps.general.services.NotificationService import NotificationService
 from apps.assign.repositories.MessageRepository import MessageRepository
 from apps.assign.entity.models import AsignationInstructor
+from apps.assign.entity.models import VisitFollowing
 
 
 logger = logging.getLogger(__name__)
@@ -52,19 +53,21 @@ class RequestAsignationService(BaseService):
             return self.error_response(f"Error al obtener PDF: {e}", "get_pdf_url")
 
     def reject_request(self, request_id, rejection_message):
-        # Disable the learner assignment to the instructor if it exists and update assigned_learners
-        asignation = AsignationInstructor.objects.filter(request_asignation=request, active=True).first()
-        if asignation:
-            asignation.active = False
-            asignation.delete_at = timezone.now()
-            asignation.save()
-            # Disminuir el contador de aprendices asignados al instructor
-            instructor = asignation.instructor
-            if hasattr(instructor, 'assigned_learners') and instructor.assigned_learners and instructor.assigned_learners > 0:
-                instructor.assigned_learners -= 1
-                instructor.save()
         try:
             request = RequestAsignation.objects.get(pk=request_id)
+            
+            # Disable the learner assignment to the instructor if it exists and update assigned_learners
+            asignation = AsignationInstructor.objects.filter(request_asignation=request, active=True).first()
+            if asignation:
+                asignation.active = False
+                asignation.delete_at = timezone.now()
+                asignation.save()
+                # Disminuir el contador de aprendices asignados al instructor
+                instructor = asignation.instructor
+                if hasattr(instructor, 'assigned_learners') and instructor.assigned_learners and instructor.assigned_learners > 0:
+                    instructor.assigned_learners -= 1
+                    instructor.save()
+            
             request.request_state = RequestState.RECHAZADO
             request.rejectionMessage = rejection_message
             request.save()
@@ -347,6 +350,49 @@ class RequestAsignationService(BaseService):
                     # Fallback: generate automatic message (for backward compatibility)
                     MessageRepository().create(req, " | ".join(auto_message_parts), "ACTUALIZACION")
 
+                # Crear visitas automáticas si el estado cambió a ASIGNADO
+                if request_state == RequestState.ASIGNADO:
+                    # Verificar si existe una asignación de instructor activa
+                    asignation = AsignationInstructor.objects.filter(
+                        request_asignation=req, 
+                        active=True
+                    ).first()
+                    
+                    if asignation:
+                        start_date = req.date_start_production_stage
+                        end_date = req.date_end_production_stage
+                        
+                        if start_date and end_date:
+                            # Verificar si ya existen visitas para esta asignación
+                            existing_visits = VisitFollowing.objects.filter(
+                                asignation_instructor=asignation
+                            ).count()
+                            
+                            # Solo crear visitas si no existen previamente
+                            if existing_visits == 0:
+                                visitas = []
+                                total_days = (end_date - start_date).days
+                                if total_days < 1:
+                                    total_days = 1
+                                periodo = total_days / 3
+                                nombres = ['Concertación', 'Visita parcial', 'Visita final']
+                                
+                                for i, nombre in enumerate(nombres, start=1):
+                                    fecha = start_date + relativedelta(days=round(periodo * (i-1)))
+                                    visitas.append(VisitFollowing(
+                                        asignation_instructor=asignation,
+                                        visit_number=i,
+                                        name_visit=nombre,
+                                        scheduled_date=fecha,
+                                        state_visit='por hacer',
+                                        observations=None,
+                                        date_visit_made=None,
+                                        observation_state_visit=None,
+                                        pdf_report=None
+                                    ))
+                                VisitFollowing.objects.bulk_create(visitas)
+                                logger.info(f"Se crearon {len(visitas)} visitas para la asignación {asignation.id}")
+
             return {
                 'success': True,
                 'message': 'Solicitud actualizada correctamente',
@@ -574,7 +620,7 @@ class RequestAsignationService(BaseService):
         
         solicitudes = RequestAsignation.objects.filter(apprentice_id=aprendiz_id)
         # States that do NOT count as active
-        inactivos = ['RECHAZADA', 'FINALIZADA']
+        inactivos = [RequestState.RECHAZADO, 'FINALIZADA']
         activas = solicitudes.exclude(request_state__in=inactivos)
 
         # A. Maximum 2 active requests
