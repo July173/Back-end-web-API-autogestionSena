@@ -1,6 +1,7 @@
 from core.base.services.implements.baseService.BaseService import BaseService
 from apps.security.repositories.FormRepository import FormRepository
 from apps.security.entity.models import Form
+from apps.security.entity.serializers.FormSerializer import FormSerializer
 
 
 class FormService(BaseService):
@@ -26,7 +27,7 @@ class FormService(BaseService):
         exists = Form.objects.filter(name__iexact=name, delete_at__isnull=True).exists()
         if exists:
             return None, "Ya existe un formulario con ese nombre."
-        serializer = self.repository.get_serializer()(data=validated_data)
+        serializer = FormSerializer(data=validated_data)
         if serializer.is_valid():
             instance = serializer.save()
             return instance, None

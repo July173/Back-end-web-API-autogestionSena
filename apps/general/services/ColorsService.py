@@ -1,5 +1,6 @@
 from core.base.services.implements.baseService.BaseService import BaseService
 from apps.general.repositories.ColorsRepository import ColorsRepository
+from apps.general.entity.serializers.ColorsSerializer import ColorsSerializer
 
 
 
@@ -27,7 +28,7 @@ class ColorsService(BaseService):
         exists = Colors.objects.filter(name__iexact=name, delete_at__isnull=True).exists()
         if exists:
             return None, "Ya existe un color con ese nombre."
-        serializer = self.repository.get_serializer()(data=validated_data)
+        serializer = ColorsSerializer(data=validated_data)
         if serializer.is_valid():
             instance = serializer.save()
             return instance, None

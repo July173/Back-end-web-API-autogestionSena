@@ -1,6 +1,7 @@
 # apps/security/services/role_service.py
 from core.base.services.implements.baseService.BaseService import BaseService
 from apps.security.repositories.RoleRepository import RoleRepository
+from apps.security.entity.serializers.RoleSerializer import RoleSerializer
 
 
 class RoleService(BaseService):
@@ -12,7 +13,7 @@ class RoleService(BaseService):
         exists = Role.objects.filter(type_role__iexact=name, delete_at__isnull=True).exists()
         if exists:
             return None, "Ya existe un rol con ese nombre."
-        serializer = self.repository.get_serializer()(data=validated_data)
+        serializer = RoleSerializer(data=validated_data)
         if serializer.is_valid():
             instance = serializer.save()
             return instance, None

@@ -1,6 +1,7 @@
 from core.base.services.implements.baseService.BaseService import BaseService
 from apps.security.repositories.ModuleRepository import ModuleRepository
 from apps.security.entity.models import Module
+from apps.security.entity.serializers.ModuleSerializer import ModuleSerializer
 
 class ModuleService(BaseService):
     def __init__(self):
@@ -13,7 +14,7 @@ class ModuleService(BaseService):
         exists = Module.objects.filter(name__iexact=name, delete_at__isnull=True).exists()
         if exists:
             return None, "Ya existe un módulo con ese nombre."
-        serializer = self.repository.get_serializer()(data=validated_data)
+        serializer = ModuleSerializer(data=validated_data)
         if serializer.is_valid():
             instance = serializer.save()
             return instance, None
