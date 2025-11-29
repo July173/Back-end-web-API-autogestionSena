@@ -19,13 +19,15 @@ from django.utils import timezone
 from apps.assign.entity.serializers.form.RequestAsignationDashboardSerializer import RequestAsignationDashboardSerializer
 from apps.general.services.NotificationService import NotificationService
 from apps.assign.repositories.MessageRepository import MessageRepository
-
+from apps.assign.entity.models import AsignationInstructor
+from apps.assign.entity.models import VisitFollowing
 
 
 logger = logging.getLogger(__name__)
 
 
 class RequestAsignationService(BaseService):
+ 
 
     
 
@@ -53,6 +55,19 @@ class RequestAsignationService(BaseService):
     def reject_request(self, request_id, rejection_message):
         try:
             request = RequestAsignation.objects.get(pk=request_id)
+            
+            # Disable the learner assignment to the instructor if it exists and update assigned_learners
+            asignation = AsignationInstructor.objects.filter(request_asignation=request, active=True).first()
+            if asignation:
+                asignation.active = False
+                asignation.delete_at = timezone.now()
+                asignation.save()
+                # Disminuir el contador de aprendices asignados al instructor
+                instructor = asignation.instructor
+                if hasattr(instructor, 'assigned_learners') and instructor.assigned_learners and instructor.assigned_learners > 0:
+                    instructor.assigned_learners -= 1
+                    instructor.save()
+            
             request.request_state = RequestState.RECHAZADO
             request.rejectionMessage = rejection_message
             request.save()
@@ -176,6 +191,16 @@ class RequestAsignationService(BaseService):
             form_requests = self.repository.get_all_form_requests()
             requests_data = []
             for person, aprendiz, enterprise, boss, human_talent, sede, modality, request_asignation in form_requests:
+                # Buscar instructor asignado a la solicitud (si existe)
+                instructor_name = None
+                instructor_id = None
+                asignation = getattr(request_asignation, 'asignation_instructor', None)
+                if asignation:
+                    instructor = getattr(asignation, 'instructor', None)
+                    if instructor and hasattr(instructor, 'person'):
+                        instructor_id = instructor.id
+                        p = instructor.person
+                        instructor_name = f"{getattr(p, 'first_name', '')} {getattr(p, 'first_last_name', '')} {getattr(p, 'second_last_name', '')}".strip()
                 request_item = {
                     'id': request_asignation.id,  
                     'aprendiz_id': aprendiz.id,   
@@ -186,7 +211,9 @@ class RequestAsignationService(BaseService):
                     'request_state': request_asignation.request_state,
                     'nombre_modalidad': getattr(modality, 'name_modality', None) if modality else None,
                     'boss': boss.name_boss if boss else None,
-                    'human_talent': human_talent.name if human_talent else None
+                    'human_talent': human_talent.name if human_talent else None,
+                    'instructor': instructor_name,
+                    'instructor_id': instructor_id
                 }
                 requests_data.append(request_item)
             logger.info(f"Se encontraron {len(requests_data)} solicitudes")
@@ -262,9 +289,11 @@ class RequestAsignationService(BaseService):
             return self.error_response(f"Error al filtrar solicitudes: {e}", "filter_form_requests")
 
 
-    def update_request_state(self, request_id, request_state=None, fecha_inicio=None, fecha_fin=None):
+    def update_request_state(self, request_id, request_state=None, fecha_inicio=None, fecha_fin=None, content=None, type_message=None, whose_message=None):
         """
         Update the request_asignation state and optionally the start/end dates.
+        If content, type_message and whose_message are provided from frontend, use them.
+        Otherwise, generate automatic message for backward compatibility.
         Returns a dict with the same structure as other service methods.
         """
         try:
@@ -286,32 +315,83 @@ class RequestAsignationService(BaseService):
                     return self.error_response("La fecha de inicio no puede ser mayor que la fecha de fin de contrato.", "invalid_dates")
                 diferencia = relativedelta(fecha_fin_parsed, fecha_inicio_parsed)
                 meses = diferencia.years * 12 + diferencia.months
-                if meses > 0 or diferencia.days > 0:
-                    return self.error_response("No debe haber meses de diferencia entre la fecha de inicio y fin de contrato.", "invalid_dates")
+                if meses > 7 or (meses == 7 and diferencia.days > 0):
+                    return self.error_response("No debe haber más de 7 meses de diferencia entre la fecha de inicio y fin de contrato.", "invalid_dates")
 
             # Apply updates
             updated = False
-            content = []
+            auto_message_parts = []
+            
             if request_state is not None:
                 req.request_state = request_state
                 updated = True
-                content.append(f"Estado actualizado a: {request_state}")
+                auto_message_parts.append(f"Estado actualizado a: {request_state}")
 
             if fecha_inicio_parsed is not None:
                 req.date_start_production_stage = fecha_inicio_parsed
                 updated = True
-                content.append(f"Fecha de inicio actualizada a: {fecha_inicio_parsed}")
+                auto_message_parts.append(f"Fecha de inicio actualizada a: {fecha_inicio_parsed}")
 
             if fecha_fin_parsed is not None:
                 req.date_end_production_stage = fecha_fin_parsed
                 updated = True
-                content.append(f"Fecha de fin actualizada a: {fecha_fin_parsed}")
+                auto_message_parts.append(f"Fecha de fin actualizada a: {fecha_fin_parsed}")
 
             if updated:
                 req.save()
-                # Create a message log for the update
-                if content:
-                    MessageRepository().create(req, " | ".join(content), "ACTUALIZACION")
+                
+                # Create message: prioritize frontend-provided message, fallback to auto-generated
+                if content and type_message:
+                    # Use message data from frontend (instructor valuation message)
+                    message_type = type_message if type_message else "ACTUALIZACION"
+                    message_whose = whose_message if whose_message else "INSTRUCTOR"
+                    MessageRepository().create(req, content, message_type, message_whose)
+                elif auto_message_parts:
+                    # Fallback: generate automatic message (for backward compatibility)
+                    MessageRepository().create(req, " | ".join(auto_message_parts), "ACTUALIZACION")
+
+                # Crear visitas automáticas si el estado cambió a ASIGNADO
+                if request_state == RequestState.ASIGNADO:
+                    # Verificar si existe una asignación de instructor activa
+                    asignation = AsignationInstructor.objects.filter(
+                        request_asignation=req, 
+                        active=True
+                    ).first()
+                    
+                    if asignation:
+                        start_date = req.date_start_production_stage
+                        end_date = req.date_end_production_stage
+                        
+                        if start_date and end_date:
+                            # Verificar si ya existen visitas para esta asignación
+                            existing_visits = VisitFollowing.objects.filter(
+                                asignation_instructor=asignation
+                            ).count()
+                            
+                            # Solo crear visitas si no existen previamente
+                            if existing_visits == 0:
+                                visitas = []
+                                total_days = (end_date - start_date).days
+                                if total_days < 1:
+                                    total_days = 1
+                                periodo = total_days / 3
+                                nombres = ['Concertación', 'Visita parcial', 'Visita final']
+                                
+                                for i, nombre in enumerate(nombres, start=1):
+                                    fecha = start_date + relativedelta(days=round(periodo * (i-1)))
+                                    visitas.append(VisitFollowing(
+                                        asignation_instructor=asignation,
+                                        visit_number=i,
+                                        name_visit=nombre,
+                                        scheduled_date=fecha,
+                                        state_visit='por hacer',
+                                        observations=None,
+                                        date_visit_made=None,
+                                        observation_state_visit=None,
+                                        pdf_report=None
+                                    ))
+                                VisitFollowing.objects.bulk_create(visitas)
+                                logger.info(f"Se crearon {len(visitas)} visitas para la asignación {asignation.id}")
 
             return {
                 'success': True,
@@ -540,7 +620,7 @@ class RequestAsignationService(BaseService):
         
         solicitudes = RequestAsignation.objects.filter(apprentice_id=aprendiz_id)
         # States that do NOT count as active
-        inactivos = ['RECHAZADA', 'FINALIZADA']
+        inactivos = [RequestState.RECHAZADO, 'FINALIZADA']
         activas = solicitudes.exclude(request_state__in=inactivos)
 
         # A. Maximum 2 active requests
@@ -557,5 +637,22 @@ class RequestAsignationService(BaseService):
         if modalidad_obj and modalidad_obj.name_modality.upper().replace(' ', '_') == contrato_nombre:
             if activas.filter(modality_productive_stage__name_modality__iexact=modalidad_obj.name_modality).exists():
                 raise ValidationError("Solo puedes tener un contrato de aprendizaje activo.")
-
         return True
+    
+    
+    
+    def get_request_messages_by_request_id(self, request_id):
+        """
+        Devuelve todos los mensajes asociados a una solicitud de asignación por su ID.
+        """
+        try:
+            messages = MessageRepository().get().filter(request_asignation_id=request_id)
+            from apps.assign.entity.serializers.MessageSerializer import MessageSerializer
+            serializer = MessageSerializer(messages, many=True)
+            return {
+                'success': True,
+                'count': len(serializer.data),
+                'data': serializer.data
+            }
+        except Exception as e:
+            return self.error_response(f"Error al obtener los mensajes: {e}", "get_request_messages_by_request_id")

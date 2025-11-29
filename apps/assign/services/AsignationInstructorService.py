@@ -16,6 +16,7 @@ from apps.general.services.NotificationService import NotificationService
 
 
 class AsignationInstructorService(BaseService):
+
     def __init__(self):
         self.repository = AsignationInstructorRepository()
 
@@ -95,7 +96,7 @@ class AsignationInstructorService(BaseService):
             user = User.objects.filter(person=person).first()
             email = user.email if user else None
             if email:
-                send_instructor_assignment_email(   
+                send_instructor_assignment_email(
                     email,
                     f"{person.first_name} {person.first_last_name}",
                     f"{instructor.person.first_name} {instructor.person.first_last_name}",
@@ -142,7 +143,6 @@ class AsignationInstructorService(BaseService):
                         ))
                     VisitFollowing.objects.bulk_create(visitas)
             # Notificar por sistema al aprendiz e instructor
-            
             NotificationService().notify_assignment(apprentice, instructor, ficha=request_asignation.apprentice.ficha)
             return asignation
         except IntegrityError as ie:
@@ -157,3 +157,21 @@ class AsignationInstructorService(BaseService):
 
     def get_with_apprentice_instructor(self):
         return self.repository.model.objects.select_related('instructor', 'request_asignation__apprentice').all()
+
+
+    def get_full_data(self, asignation_id):
+        try:
+            asignation = AsignationInstructor.objects.select_related(
+                'instructor__person', 'request_asignation__apprentice__person'
+            ).get(id=asignation_id, active=True)
+        except AsignationInstructor.DoesNotExist:
+            return None
+        apprentice = asignation.request_asignation.apprentice
+        instructor = asignation.instructor
+        apprentice_person = apprentice.person
+        instructor_person = instructor.person
+        return {
+            'asignation': asignation,
+            'apprentice': apprentice_person,
+            'instructor': instructor_person
+        }

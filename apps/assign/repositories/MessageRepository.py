@@ -13,10 +13,11 @@ class MessageRepository:
         except Message.DoesNotExist:
             return None
 
-    def create(self, request_asignation, content, type_message):
+    def create(self, request_asignation, content, type_message, whose_message=None):
         """Create and return a new Message instance."""
         return Message.objects.create(
             request_asignation=request_asignation,
             content=content,
-            type_message=type_message
+            type_message=type_message,
+            whose_message=whose_message
         )

@@ -216,6 +216,20 @@ class InstructorViewset(BaseViewSet):
     @swagger_auto_schema(
         operation_description="Filtra instructores por nombre, número de documento y área de conocimiento.",
         manual_parameters=[
+                                    openapi.Parameter(
+                                        'request_state',
+                                        openapi.IN_QUERY,
+                                        description="Estado de la solicitud a filtrar (opcional)",
+                                        type=openapi.TYPE_STRING,
+                                        required=False
+                                    ),
+                        openapi.Parameter(
+                            'program_name',
+                            openapi.IN_QUERY,
+                            description="Nombre (o parte) del programa a filtrar (opcional)",
+                            type=openapi.TYPE_STRING,
+                            required=False
+                        ),
             openapi.Parameter('search', openapi.IN_QUERY, description="Buscar por nombre o número de documento", type=openapi.TYPE_STRING),
             openapi.Parameter('knowledge_area_id', openapi.IN_QUERY, description="Filtrar por área de conocimiento (ID)", type=openapi.TYPE_INTEGER),
             openapi.Parameter('is_followup_instructor', openapi.IN_QUERY, description="Filtrar instructores: 'all' (todos), 'true' (solo seguimiento), 'false' (solo no seguimiento)", type=openapi.TYPE_STRING, enum=['all','true','false']),
@@ -244,8 +258,52 @@ class InstructorViewset(BaseViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        operation_description="Lista todas las asignaciones de un instructor, incluyendo datos del aprendiz y la solicitud.",
+        operation_description="Lista todas las asignaciones de un instructor, incluyendo datos del aprendiz y la solicitud. Si se proporciona 'asignation_id' o 'apprentice_name' como parámetros de query string, filtra por esos valores.",
         tags=["Instructor"],
+        manual_parameters=[
+            openapi.Parameter(
+                'asignation_id',
+                openapi.IN_QUERY,
+                description="ID de la asignación específica a filtrar (opcional)",
+                type=openapi.TYPE_INTEGER,
+                required=False
+            ),
+            openapi.Parameter(
+                'apprentice_name',
+                openapi.IN_QUERY,
+                description="Nombre (o parte) del aprendiz a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
+                required=False
+            ),
+            openapi.Parameter(
+                'apprentice_id_number',
+                openapi.IN_QUERY,
+                description="Número de identificación del aprendiz a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
+                required=False
+            ),
+            openapi.Parameter(
+                'modality_name',
+                openapi.IN_QUERY,
+                description="Nombre (o parte) de la modalidad a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
+                required=False
+            ),
+            openapi.Parameter(
+                'program_name',
+                openapi.IN_QUERY,
+                description="Nombre (o parte) del programa a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
+                required=False
+            ),
+            openapi.Parameter(
+                'request_state',
+                openapi.IN_QUERY,
+                description="Estado de la solicitud a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
+                required=False
+            )
+        ],
         responses={200: openapi.Response("Lista de asignaciones", 
             schema=openapi.Schema(
                 type=openapi.TYPE_ARRAY,
@@ -255,10 +313,39 @@ class InstructorViewset(BaseViewSet):
     )
     @action(detail=True, methods=['get'], url_path='asignations')
     def asignations(self, request, pk=None):
+        program_name = request.query_params.get('program_name')
+        request_state = request.query_params.get('request_state')
         """
         Endpoint para obtener todas las asignaciones de un instructor específico.
+        Si se proporciona 'asignation_id' como parámetro de query string, filtra por esa asignación.
         """
         service = InstructorService()
+        asignation_id = request.query_params.get('asignation_id')
+        apprentice_name = request.query_params.get('apprentice_name')
+        apprentice_id_number = request.query_params.get('apprentice_id_number')
+        modality_name = request.query_params.get('modality_name')
         asignaciones = service.get_asignations(pk)
+        if asignation_id:
+            asignaciones = asignaciones.filter(id=asignation_id)
+        if apprentice_name:
+            asignaciones = asignaciones.filter(
+                request_asignation__apprentice__person__first_name__icontains=apprentice_name
+            )
+        if apprentice_id_number:
+            asignaciones = asignaciones.filter(
+                request_asignation__apprentice__person__number_identification=apprentice_id_number
+            )
+        if modality_name:
+            asignaciones = asignaciones.filter(
+                request_asignation__modality_productive_stage__name_modality__icontains=modality_name
+            )
+        if program_name:
+            asignaciones = asignaciones.filter(
+                request_asignation__apprentice__ficha__program__name__icontains=program_name
+            )
+        if request_state:
+            asignaciones = asignaciones.filter(
+                request_asignation__request_state=request_state
+            )
         serializer = AsignationInstructorWithMessageSerializer(asignaciones, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
