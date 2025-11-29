@@ -9,6 +9,7 @@ class AsignationInstructorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AsignationInstructor
+        ref_name = "AsignationInstructorSimpleSerializer"
         fields = [
             'id',
             'instructor',

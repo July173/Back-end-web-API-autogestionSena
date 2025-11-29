@@ -7,7 +7,7 @@ Pasos:
   4) python manage.py migrate
   5) Actualizar la base de datos con el sql que esta predispuesto en la raiz del proyecto como sql.sql
   6) python manage.py createsuperuser
-  7) python manage.py runserver
+  7) daphne -b 0.0.0.0 -p 8000 core.asgi:application
   8) celery -A core worker --loglevel=info
   9) celery -A core beat --loglevel=info  
 

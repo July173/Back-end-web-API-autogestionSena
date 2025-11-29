@@ -139,8 +139,12 @@ INSERT INTO `ficha` (`id`, `file_number`, `type_modality`, `active`, `delete_at`
   (2, 2901885, 'Virtual', 1, NULL, 2);
 
 INSERT INTO `modality_productive_stage` (`id`, `name_modality`, `description`, `active`, `delete_at`) VALUES
-  (1, 'Contrato de aprendizaje', 'El aprendiz desarrolla su etapa práctica con contrato de aprendizaje', 1, NULL);
-
+  (1, 'Contrato de aprendizaje', 'El aprendiz desarrolla su etapa práctica con contrato de aprendizaje', 1, NULL),
+  (2, 'Vínculo Laboral', 'El aprendiz desarrolla su etapa práctica con vinculo laboral', 1, NULL),
+  (3, 'Vínculo Formativo', 'El aprendiz desarrolla su etapa práctica con vinculo formativo', 1, NULL),
+  (4, 'Proyecto Productivo', 'El aprendiz desarrolla su etapa práctica con proyecto productivo', 1, NULL),
+  (5, 'Unidad Productiva Familiar', 'El aprendiz desarrolla su etapa práctica con unidad productiva familiar', 1, NULL),
+  (6, 'Monitoria', 'El aprendiz desarrolla su etapa práctica con monitoria', 1, NULL);
 
 INSERT INTO `legal_document` (`id`, `type`, `title`, `effective_date`, `last_update`, `active`, `delete_at`) VALUES
   (1, 'terms', 'Términos y condiciones', '2025-10-01', '2025-10-01', 1, NULL);
@@ -322,11 +326,6 @@ INSERT INTO `role_form_permission` (`id`, `role_id`, `form_id`, `permission_id`,
 (93, 1, 9, 3, NULL, true),
 (94, 1, 9, 4, NULL, true),
 (95, 1, 9, 5, NULL, true),
-(96, 1, 11, 1, NULL, true),
-(97, 1, 11, 2, NULL, true),
-(98, 1, 11, 3, NULL, true),
-(99, 1, 11, 4, NULL, true),
-(100, 1, 11, 5, NULL, true),
 (101, 5, 10, 1, NULL, true),
 (102, 5, 10, 2, NULL, true),
 (103, 5, 10, 3, NULL, true),
@@ -336,7 +335,13 @@ INSERT INTO `role_form_permission` (`id`, `role_id`, `form_id`, `permission_id`,
 (107, 5, 3, 2, NULL, true),
 (108, 5, 3, 3, NULL, true),
 (109, 5, 3, 4, NULL, true),
-(110, 5, 3, 5, NULL, true);
+(110, 5, 3, 5, NULL, true),
+(111, 3, 11, 1, NULL, true),
+(112, 3, 11, 2, NULL, true),
+(113, 3, 11, 3, NULL, true),
+(114, 3, 11, 4, NULL, true),
+(115, 3, 11, 5, NULL, true);
+
 
 
 
@@ -344,7 +349,9 @@ INSERT INTO `person` (`id`, `first_name`, `second_name`, `first_last_name`, `sec
 	(1, 'July', '', 'Ramos', '', 3125647896, 1032679504, '', 1, NULL, 1),
   (2, 'Daniela', '', 'Ramos', '', 3125647896, 1032679503, '', 1, NULL, 1),
   (3, 'Ramos', '', 'Sena', '', 3125647897, 1098765431, '', 1, NULL, 1),
-  (4, 'Paola', '', 'Sena', '', 3125647897, 1098765432, '', 1, NULL, 1);
+  (4, 'Paola', '', 'Sena', '', 3125647897, 1098765432, '', 1, NULL, 1),
+  (5, 'Mario', '', 'Sena', '', 3125647897, 1098765400, '', 1, NULL, 1);
+
 
 INSERT INTO `apprentice` (`id`, `active`, `delete_at`, `ficha_id`, `person_id`) VALUES
 	(1, 1, NULL, NULL, 1);
@@ -352,22 +359,26 @@ INSERT INTO `apprentice` (`id`, `active`, `delete_at`, `ficha_id`, `person_id`) 
 INSERT INTO `instructor` ( `id`, `contract_start_date`,  `contract_end_date`,  `assigned_learners`,  `max_assigned_learners`,  `is_followup_instructor`,  `active`,  `delete_at`,  `contract_type_id`,  `knowledge_area_id`, `person_id`
 ) VALUES
 (1, '2024-01-15', '2025-01-15', 0, 0, 0, 1, NULL, 2, 1, 2),
-(2, '2023-08-01', '2024-08-01', 5, 80, 1, 1, NULL, 1, 1, 3),
-(3, '2023-08-01', '2024-08-01', 0, 0, 0, 1, NULL, 1, 1, 4);
+(2, '2023-08-01', '2024-08-01', 0, 80, 1, 1, NULL, 1, 1, 3),
+(3, '2023-08-01', '2024-08-01', 0, 0, 0, 1, NULL, 1, 1, 4),
+(4, '2023-08-01', '2024-08-01', 0, 0, 0, 1, NULL, 1, 1, 5);
+
 
 INSERT INTO `person_sede` (`id`, `active`, `delete_at`, `person_id`, `sede_id`) VALUES
 	(1, 1, NULL, 1, 32),
   (2, 1, NULL, 2, 32),
   (3, 1, NULL, 3, 32),
-  (4, 1, NULL, 4, 32);
+  (4, 1, NULL, 4, 32),
+  (5, 1, NULL, 5, 32);
+
 
 
 INSERT INTO `security_user` (`id`, `password`, `last_login`, `is_superuser`, `registered`, `email`, `is_active`, `is_staff`, `deleted_at`, `created_at`, `updated_at`, `reset_code`, `reset_code_expiration`, `person_id`, `role_id`) VALUES
 	(1, 'pbkdf2_sha256$600000$c27VSLoHl7gXHmV3Ii5pOK$FuYQpuI1rTwjdwCt3X9nYZiftEoIlOpQGkzT6+6cIEE=', NULL, 0, 0, 'daniela_ramos@soy.sena.edu.co', 1, 0, NULL, '2025-11-06 19:31:52.609196', '2025-11-06 19:32:53.972992', NULL, NULL, 1, 2),
   (2, 'pbkdf2_sha256$600000$c27VSLoHl7gXHmV3Ii5pOK$FuYQpuI1rTwjdwCt3X9nYZiftEoIlOpQGkzT6+6cIEE=', NULL, 0, 0, 'july@sena.edu.co', 1, 0, NULL, '2025-11-06 19:31:52.609196', '2025-11-06 19:32:53.972992', NULL, NULL, 2, 1),
   (3, 'pbkdf2_sha256$600000$c27VSLoHl7gXHmV3Ii5pOK$FuYQpuI1rTwjdwCt3X9nYZiftEoIlOpQGkzT6+6cIEE=', NULL, 0, 0, 'ramos@sena.edu.co', 1, 0, NULL, '2025-11-06 19:31:52.609196', '2025-11-06 19:32:53.972992', NULL, NULL, 3, 3),
-  (4, 'pbkdf2_sha256$600000$c27VSLoHl7gXHmV3Ii5pOK$FuYQpuI1rTwjdwCt3X9nYZiftEoIlOpQGkzT6+6cIEE=', NULL, 0, 0, 'paola@sena.edu.co', 1, 0, NULL, '2025-11-06 19:31:52.609196', '2025-11-06 19:32:53.972992', NULL, NULL, 4, 5);
-
+  (4, 'pbkdf2_sha256$600000$c27VSLoHl7gXHmV3Ii5pOK$FuYQpuI1rTwjdwCt3X9nYZiftEoIlOpQGkzT6+6cIEE=', NULL, 0, 0, 'paola@sena.edu.co', 1, 0, NULL, '2025-11-06 19:31:52.609196', '2025-11-06 19:32:53.972992', NULL, NULL, 4, 5),
+  (5, 'pbkdf2_sha256$600000$c27VSLoHl7gXHmV3Ii5pOK$FuYQpuI1rTwjdwCt3X9nYZiftEoIlOpQGkzT6+6cIEE=', NULL, 0, 0, 'mario@sena.edu.co', 1, 0, NULL, '2025-11-06 19:31:52.609196', '2025-11-06 19:32:53.972992', NULL, NULL, 5, 4);
 
 
 

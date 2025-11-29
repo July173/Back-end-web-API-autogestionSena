@@ -8,6 +8,8 @@ class MessageViewset(viewsets.ViewSet):
     """
     ViewSet para listar, obtener y crear mensajes usando MessageService.
     """
+    
+    #-- List --
     @swagger_auto_schema(
         operation_description="Obtiene una lista de todos los mensajes.",
         responses={200: MessageSerializer(many=True)},
@@ -18,6 +20,7 @@ class MessageViewset(viewsets.ViewSet):
         serializer = MessageSerializer(queryset, many=True)
         return Response(serializer.data)
 
+    #-- Retrieve by ID --
     @swagger_auto_schema(
         operation_description="Obtiene el detalle de un mensaje por id.",
         responses={200: MessageSerializer()},
@@ -31,6 +34,7 @@ class MessageViewset(viewsets.ViewSet):
         serializer = MessageSerializer(result)
         return Response(serializer.data)
 
+    #-- Create --
     @swagger_auto_schema(
         operation_description="Crea un nuevo mensaje.",
         request_body=MessageSerializer,
@@ -45,3 +49,5 @@ class MessageViewset(viewsets.ViewSet):
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
         out = MessageSerializer(result)
         return Response(out.data, status=status.HTTP_201_CREATED)
+    
+    # (PATCH/partial_update removed by request)

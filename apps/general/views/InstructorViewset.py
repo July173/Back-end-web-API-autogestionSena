@@ -9,11 +9,13 @@ from apps.general.entity.serializers.CreateInstructor.InstructorSerializer impor
 from apps.general.entity.models import Instructor
 from apps.general.entity.serializers.CreateInstructor.CreateInstructorSerializer import CreateInstructorSerializer
 from apps.general.entity.serializers.CreateInstructor.GetInstructorSerializer import GetInstructorSerializer
+from apps.general.entity.serializers.CreateInstructor.AsignationInstructorWithMessageSerializer import AsignationInstructorWithMessageSerializer
 
 
 class InstructorViewset(BaseViewSet):
+
     
-    
+
     def get_queryset(self):
         return Instructor.objects.all()
     
@@ -142,35 +144,7 @@ class InstructorViewset(BaseViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-    # ----------- LIST -----------
-    @swagger_auto_schema(
-        operation_description="Obtiene una lista de todos los instructores registrados.",
-        manual_parameters=[
-            openapi.Parameter(
-                'is_followup_instructor',
-                openapi.IN_QUERY,
-                description="Filtrar instructores: 'all' (todos), 'true' (solo seguimiento), 'false' (solo no seguimiento)",
-                type=openapi.TYPE_STRING,
-                enum=['all', 'true', 'false']
-            )
-        ],
-        tags=["Instructor"]
-    )
-    @action(detail=False, methods=['get'], url_path='filtered')
-    def list_filtrado(self, request, *args, **kwargs):
-        is_followup = request.query_params.get('is_followup_instructor', 'all')
-        queryset = self.get_queryset()
-        if is_followup == 'true':
-            queryset = queryset.filter(is_followup_instructor=True)
-        elif is_followup == 'false':
-            queryset = queryset.filter(is_followup_instructor=False)
-        # Si es 'all' no se filtra
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+    # ----------- LIST ----------- (parámetros de filtrado unificados en el endpoint `filter`)
     
 
     # ----------- CUSTOM UPDATE -----------
@@ -190,10 +164,16 @@ class InstructorViewset(BaseViewSet):
                 pk,
                 {k: data[k] for k in ['first_name', 'second_name', 'first_last_name', 'second_last_name', 'phone_number', 'type_identification', 'number_identification']},
                 {k: data[k] for k in ['email', 'role_id'] if k in data},
-                {k: data[k] for k in ['contractType', 'contractStartDate', 'contractEndDate', 'knowledgeArea', 'is_followup_instructor'] if k in data},
+                {
+                    'contract_type_id': data.get('contract_type_id'),
+                    'contract_start_date': data.get('contract_start_date'),
+                    'contract_end_date': data.get('contract_end_date'),
+                    'knowledge_area_id': data.get('knowledge_area_id'),
+                    'is_followup_instructor': data.get('is_followup_instructor')
+                },
                 data.get('sede_id')
             )
-            return Response({"detail": "Instructor actualizado correctamente.", "ids": result}, status=status.HTTP_200_OK)
+            return self.render_message(result)
         except Instructor.DoesNotExist:
             return Response({"detail": "Instructor no encontrado."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
@@ -236,8 +216,23 @@ class InstructorViewset(BaseViewSet):
     @swagger_auto_schema(
         operation_description="Filtra instructores por nombre, número de documento y área de conocimiento.",
         manual_parameters=[
+                                    openapi.Parameter(
+                                        'request_state',
+                                        openapi.IN_QUERY,
+                                        description="Estado de la solicitud a filtrar (opcional)",
+                                        type=openapi.TYPE_STRING,
+                                        required=False
+                                    ),
+                        openapi.Parameter(
+                            'program_name',
+                            openapi.IN_QUERY,
+                            description="Nombre (o parte) del programa a filtrar (opcional)",
+                            type=openapi.TYPE_STRING,
+                            required=False
+                        ),
             openapi.Parameter('search', openapi.IN_QUERY, description="Buscar por nombre o número de documento", type=openapi.TYPE_STRING),
             openapi.Parameter('knowledge_area_id', openapi.IN_QUERY, description="Filtrar por área de conocimiento (ID)", type=openapi.TYPE_INTEGER),
+            openapi.Parameter('is_followup_instructor', openapi.IN_QUERY, description="Filtrar instructores: 'all' (todos), 'true' (solo seguimiento), 'false' (solo no seguimiento)", type=openapi.TYPE_STRING, enum=['all','true','false']),
         ],
         responses={200: openapi.Response("Lista de instructores filtrados")},
         tags=["Instructor"]
@@ -246,12 +241,111 @@ class InstructorViewset(BaseViewSet):
     def filter_instructors(self, request):
         search = request.query_params.get('search')
         knowledge_area_id = request.query_params.get('knowledge_area_id')
+        is_followup = request.query_params.get('is_followup_instructor', 'all')
         if knowledge_area_id:
             try:
                 knowledge_area_id = int(knowledge_area_id)
             except ValueError:
                 return Response({"detail": "El ID de área de conocimiento debe ser un número."}, status=status.HTTP_400_BAD_REQUEST)
-        instructors = self.service_class().repository.get_filtered_instructors(search, knowledge_area_id)
-        serializer = self.get_serializer(instructors, many=True)
+
+        queryset = self.service_class().repository.get_filtered_instructors(search, knowledge_area_id, is_followup)
+        # Paginar resultados si corresponde
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @swagger_auto_schema(
+        operation_description="Lista todas las asignaciones de un instructor, incluyendo datos del aprendiz y la solicitud. Si se proporciona 'asignation_id' o 'apprentice_name' como parámetros de query string, filtra por esos valores.",
+        tags=["Instructor"],
+        manual_parameters=[
+            openapi.Parameter(
+                'asignation_id',
+                openapi.IN_QUERY,
+                description="ID de la asignación específica a filtrar (opcional)",
+                type=openapi.TYPE_INTEGER,
+                required=False
+            ),
+            openapi.Parameter(
+                'apprentice_name',
+                openapi.IN_QUERY,
+                description="Nombre (o parte) del aprendiz a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
+                required=False
+            ),
+            openapi.Parameter(
+                'apprentice_id_number',
+                openapi.IN_QUERY,
+                description="Número de identificación del aprendiz a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
+                required=False
+            ),
+            openapi.Parameter(
+                'modality_name',
+                openapi.IN_QUERY,
+                description="Nombre (o parte) de la modalidad a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
+                required=False
+            ),
+            openapi.Parameter(
+                'program_name',
+                openapi.IN_QUERY,
+                description="Nombre (o parte) del programa a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
+                required=False
+            ),
+            openapi.Parameter(
+                'request_state',
+                openapi.IN_QUERY,
+                description="Estado de la solicitud a filtrar (opcional)",
+                type=openapi.TYPE_STRING,
+                required=False
+            )
+        ],
+        responses={200: openapi.Response("Lista de asignaciones", 
+            schema=openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Items(type=openapi.TYPE_OBJECT)
+            )
+        )}
+    )
+    @action(detail=True, methods=['get'], url_path='asignations')
+    def asignations(self, request, pk=None):
+        program_name = request.query_params.get('program_name')
+        request_state = request.query_params.get('request_state')
+        """
+        Endpoint para obtener todas las asignaciones de un instructor específico.
+        Si se proporciona 'asignation_id' como parámetro de query string, filtra por esa asignación.
+        """
+        service = InstructorService()
+        asignation_id = request.query_params.get('asignation_id')
+        apprentice_name = request.query_params.get('apprentice_name')
+        apprentice_id_number = request.query_params.get('apprentice_id_number')
+        modality_name = request.query_params.get('modality_name')
+        asignaciones = service.get_asignations(pk)
+        if asignation_id:
+            asignaciones = asignaciones.filter(id=asignation_id)
+        if apprentice_name:
+            asignaciones = asignaciones.filter(
+                request_asignation__apprentice__person__first_name__icontains=apprentice_name
+            )
+        if apprentice_id_number:
+            asignaciones = asignaciones.filter(
+                request_asignation__apprentice__person__number_identification=apprentice_id_number
+            )
+        if modality_name:
+            asignaciones = asignaciones.filter(
+                request_asignation__modality_productive_stage__name_modality__icontains=modality_name
+            )
+        if program_name:
+            asignaciones = asignaciones.filter(
+                request_asignation__apprentice__ficha__program__name__icontains=program_name
+            )
+        if request_state:
+            asignaciones = asignaciones.filter(
+                request_asignation__request_state=request_state
+            )
+        serializer = AsignationInstructorWithMessageSerializer(asignaciones, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

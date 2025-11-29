@@ -9,7 +9,10 @@ from apps.security.services.FormService import FormService
 from apps.security.entity.serializers.FormSerializer import FormSerializer
 
 
+
 class FormViewSet(BaseViewSet):
+    
+
     service_class = FormService
     serializer_class = FormSerializer
 
@@ -31,7 +34,12 @@ class FormViewSet(BaseViewSet):
         tags=["Form"]
     )
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        service = self.service_class()
+        instance, error = service.create_form(request.data)
+        if error:
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     # ----------- RETRIEVE -----------
     @swagger_auto_schema(
@@ -97,3 +105,22 @@ class FormViewSet(BaseViewSet):
             {"detail": "No encontrado."},
             status=status.HTTP_404_NOT_FOUND
         )
+
+    # ----------- FILTER FORMS (custom) -----------
+    @swagger_auto_schema(
+        operation_description="Filtra formularios por nombre y estado (activo/inactivo)",
+        tags=["Form"],
+        manual_parameters=[
+            openapi.Parameter('active', openapi.IN_QUERY, description="Estado del formulario (true/false)", type=openapi.TYPE_BOOLEAN),
+            openapi.Parameter('search', openapi.IN_QUERY, description="Nombre del formulario", type=openapi.TYPE_STRING)
+        ],
+        responses={200: openapi.Response("Lista de formularios filtrados")}
+    )
+    @action(detail=False, methods=['get'], url_path='filter')
+    def filter_forms(self, request):
+        active = request.query_params.get('active')
+        search = request.query_params.get('search')
+        service = self.service_class()
+        queryset = service.get_filtered_forms(active, search)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

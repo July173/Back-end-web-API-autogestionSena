@@ -14,10 +14,11 @@ from .SupportSchedule import SupportSchedule
 from .SupportContact import SupportContact
 from .LegalDocument import LegalDocument
 from .LegalSection import LegalSection
+from .Notification import Notification
 
 __all__ = [
     'Apprentice', 'Center', 'Ficha',
     'Instructor', 'Program', 'Regional', 'Sede', 'PersonSede', 'KnowledgeArea',
     'Colors', 'TypeOfQueries', 'SupportSchedule', 'SupportContact', 'LegalDocument',
-    'LegalSection', 'TypeContract'
+    'LegalSection', 'TypeContract', 'Notification'
 ]

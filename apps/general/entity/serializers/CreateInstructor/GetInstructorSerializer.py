@@ -23,6 +23,8 @@ class GetInstructorSerializer(serializers.ModelSerializer):
     knowledge_area = serializers.SerializerMethodField()
     sede = serializers.SerializerMethodField()
     active = serializers.SerializerMethodField()
+    assigned_learners = serializers.IntegerField(read_only=True)
+    max_assigned_learners = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Instructor
@@ -43,12 +45,10 @@ class GetInstructorSerializer(serializers.ModelSerializer):
             'knowledge_area',
             'sede',
             'is_followup_instructor',
+            'assigned_learners',
+            'max_assigned_learners',
             'active',
         ]
-        extra_kwargs = {
-            'assigned_learners': {'write_only': True},
-            'max_assigned_learners': {'write_only': True},
-        }
 
     def get_first_name(self, obj):
         """Get the instructor's first name from the related person object."""

@@ -10,6 +10,7 @@ from apps.security.entity.models.DocumentType import DocumentType
 from django.utils.crypto import get_random_string
 from core.utils.Validation import is_soy_sena_email
 from apps.security.services.UserService import UserService
+from apps.general.services.NotificationService import NotificationService
 
 
 class AprendizService(BaseService):
@@ -45,7 +46,7 @@ class AprendizService(BaseService):
             with transaction.atomic():
                 # 1. Create person
                 person_data = {
-                    'type_identification': type_identification,
+                    'type_identification_id': type_identification,
                     'number_identification': numero_identificacion,
                     'first_name': first_name,
                     'second_name': second_name,
@@ -61,14 +62,15 @@ class AprendizService(BaseService):
                     'email': email,
                     'password': password_temporal,
                     'person_id': person.id,
-                    'is_active': False,
+                    'is_active': True,
+                    'registered': False,
                     'role_id': 2
                 }
                 user = UserService().create(user_data)
 
                 # 3. Create apprentice
                 ficha = Ficha.objects.get(pk=ficha_id)
-                aprendiz = Apprentice.objects.create(person=person, ficha=ficha)
+                aprendiz = Apprentice.objects.create(person=person, ficha=ficha, active=True)
 
                 # 4. Send welcome email
                 try:
@@ -76,6 +78,8 @@ class AprendizService(BaseService):
                     send_account_created_email(email, full_name, password_temporal)
                 except Exception as e:
                     print(f"[AprendizService] No se pudo enviar el correo de registro al aprendiz: {str(e)}")
+
+
 
                 return format_response(
                     f"Aprendiz registrado exitosamente. Email: {user.email}",
@@ -123,8 +127,8 @@ class AprendizService(BaseService):
         user_data = {
             'email': validated_data['email'],
         }
-        ficha_id = validated_data['ficha_id']
-        role_id = validated_data['role_id']
+        ficha_id = validated_data.get('ficha_id', validated_data.get('ficha'))
+        role_id = validated_data.get('role_id', validated_data.get('role'))
 
         aprendiz = Apprentice.objects.get(pk=aprendiz_id)
         # Validación de correo institucional

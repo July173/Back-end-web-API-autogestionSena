@@ -18,9 +18,15 @@ class RequestAsignation(models.Model):
     modality_productive_stage = models.ForeignKey(
         'assign.ModalityProductiveStage', on_delete=models.CASCADE, related_name='requests'
     )
+    human_talent = models.ForeignKey(
+        'assign.HumanTalent', on_delete=models.CASCADE, related_name='requests', null=True, blank=True
+    )
+    boss = models.ForeignKey(
+        'assign.Boss', on_delete=models.CASCADE, related_name='requests', null=True, blank=True
+    )
     request_date = models.DateField()
-    date_start_production_stage = models.DateField()
-    date_end_production_stage = models.DateField()
+    date_start_production_stage = models.DateField(null=True, blank=True)
+    date_end_production_stage = models.DateField(null=True, blank=True)
     pdf_request = models.FileField(upload_to='requests/', null=True, blank=True)
     request_state = models.CharField(
         max_length=50,

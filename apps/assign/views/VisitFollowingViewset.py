@@ -9,9 +9,12 @@ from apps.assign.services.VisitFollowingService import VisitFollowingService
 from apps.assign.entity.serializers.VisitFollowingSerializer import VisitFollowingSerializer
 
 
+from apps.assign.entity.models import VisitFollowing
+
 class VisitFollowingViewset(BaseViewSet):
     service_class = VisitFollowingService
     serializer_class = VisitFollowingSerializer
+    queryset = VisitFollowing.objects.all()
 
     @swagger_auto_schema(
         operation_description="Obtiene una lista de todas las visitas de seguimiento.",
