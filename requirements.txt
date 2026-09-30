@@ -2,6 +2,7 @@ channels
 channels-redis
 daphne
 whitenoise
+gunicorn==23.0.0
 amqp==5.3.1
 asgiref==3.9.1
 async-timeout==5.0.1

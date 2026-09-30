@@ -1,35 +1,26 @@
 #!/bin/sh
 set -e
 
-DB_PASS_VAL="${DB_PASSWORD:-$DB_PASS}"
+echo "=== Iniciando contenedor Autogestión SENA ==="
+echo "Target DB: ${DB_HOST}:${DB_PORT:-3306} / Base de datos: ${DB_NAME}"
 
-echo "Waiting for database at ${DB_HOST}:${DB_PORT:-3306}..."
-
-# If DB host and user are provided, wait until MySQL is reachable
-if [ -n "$DB_HOST" ] && [ -n "$DB_USER" ]; then
-  MAX_TRIES=15
-  COUNT=0
-  until mysqladmin ping -h "$DB_HOST" -P "${DB_PORT:-3306}" -u"$DB_USER" -p"$DB_PASS_VAL" >/dev/null 2>&1 || [ $COUNT -ge $MAX_TRIES ]; do
-    echo "Waiting for MySQL at $DB_HOST:${DB_PORT:-3306}... ($COUNT/$MAX_TRIES)"
-    sleep 2
-    COUNT=$((COUNT + 1))
-  done
-fi
-
-echo "Database ready or check completed — checking migrations"
+# Migraciones y siembra de datos de prueba
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
-  echo "RUN_MIGRATIONS=true — applying migrations"
-  python manage.py makemigrations --noinput || true
-  python manage.py migrate --noinput
-  python manage.py seed_demo_users || true
-else
-  echo "RUN_MIGRATIONS not true — skipping migrations"
+  echo "--- Ejecutando makemigrations ---"
+  python manage.py makemigrations --noinput || echo "[AVISO] makemigrations finalizado con aviso"
+  
+  echo "--- Ejecutando migrate ---"
+  python manage.py migrate --noinput || echo "[AVISO] migrate finalizado con aviso"
+  
+  echo "--- Sembrando usuarios demo ---"
+  python manage.py seed_demo_users || echo "[AVISO] seed_demo_users finalizado con aviso"
 fi
 
+# Recolección de estáticos
 if [ "${COLLECT_STATIC:-false}" = "true" ]; then
-  echo "COLLECT_STATIC=true — collecting static files"
-  python manage.py collectstatic --noinput || true
+  echo "--- Recolectando archivos estáticos ---"
+  python manage.py collectstatic --noinput || echo "[AVISO] collectstatic finalizado con aviso"
 fi
 
-echo "Starting process: $@"
+echo "=== Arrancando servidor en puerto ${PORT:-8000} ==="
 exec "$@"

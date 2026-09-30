@@ -12,10 +12,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ============================
 # CONFIGURACIÓN BÁSICA
 # ============================
-SECRET_KEY = os.getenv('SECRET_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-sena-default-key-change-in-prod')
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1')
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
+
+allowed_hosts_raw = os.getenv('ALLOWED_HOSTS', '*')
+ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_raw.split(',') if h.strip()] if allowed_hosts_raw else ['*']
+
 EMAILS_FROM_EMAIL = os.getenv('EMAILS_FROM_EMAIL')
+
+# ============================
+# ARCHIVOS ESTÁTICOS Y MULTIMEDIA
+# ============================
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # ============================
 # APPS INSTALADAS
@@ -83,7 +95,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # ============================
 db_options = {'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"}
 if os.getenv('DB_SSL', 'false').lower() in ('true', '1'):
-    db_options['ssl_mode'] = 'REQUIRED'
+    db_options['ssl'] = {}
 
 DATABASES = {
     'default': {
@@ -258,13 +270,17 @@ else:
 # ============================
 # EMAIL CONFIG (desde .env)
 # ============================
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+if os.getenv('EMAIL_HOST_USER') and os.getenv('EMAIL_HOST_PASSWORD'):
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER')
+DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER', 'no-reply@sena.edu.co')
 EMAILS_FROM_NAME = os.getenv('EMAIL_FROM_NAME', 'AutoGestion SENA')
 
 # ============================
