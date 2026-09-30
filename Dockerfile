@@ -31,5 +31,5 @@ RUN chmod +x /app/wait-for-migrations.sh
 # Usar el entrypoint para esperar DB y ejecutar migraciones antes del comando
 ENTRYPOINT ["/app/entrypoint.sh"]
 
-# Comando por defecto (soporta HTTP y WebSockets con puerto dinámico)
-CMD ["sh", "-c", "daphne -b 0.0.0.0 -p ${PORT:-8000} core.asgi:application"]
+# Comando por defecto para producción con Gunicorn
+CMD ["sh", "-c", "gunicorn core.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120"]

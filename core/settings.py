@@ -12,10 +12,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ============================
 # CONFIGURACIÓN BÁSICA
 # ============================
-SECRET_KEY = os.getenv('SECRET_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-sena-default-key-change-in-prod')
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1')
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
+
+allowed_hosts_raw = os.getenv('ALLOWED_HOSTS', '*')
+ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_raw.split(',') if h.strip()] if allowed_hosts_raw else ['*']
+
 EMAILS_FROM_EMAIL = os.getenv('EMAILS_FROM_EMAIL')
+
+# ============================
+# ARCHIVOS ESTÁTICOS Y MULTIMEDIA
+# ============================
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # ============================
 # APPS INSTALADAS
