@@ -9,6 +9,7 @@ API RESTful y WebSocket de alto rendimiento para el sistema de **Autogestión SE
 | Servicio | Proveedor | URL / Endpoint | Estado |
 | :--- | :--- | :--- | :--- |
 | **API REST en Producción** | Render (Docker Web Service) | [https://autogestion-sena-api.onrender.com](https://autogestion-sena-api.onrender.com) | `Online` 🟢 |
+| **Health Check & Keep-Alive** | Render / Cron-job.org | [https://autogestion-sena-api.onrender.com/health](https://autogestion-sena-api.onrender.com/health) | `Online` 🟢 |
 | **Documentación Swagger / OpenAPI** | drf-yasg | [https://autogestion-sena-api.onrender.com/swagger/](https://autogestion-sena-api.onrender.com/swagger/) | `Online` 🟢 |
 | **Documentación ReDoc** | drf-yasg | [https://autogestion-sena-api.onrender.com/redoc/](https://autogestion-sena-api.onrender.com/redoc/) | `Online` 🟢 |
 | **Base de Datos Cloud** | Aiven Cloud MySQL 8.4 | Host: `mysql-25dc6630-accesorioslilis2026.b.aivencloud.com:28668` | `Online` 🟢 |

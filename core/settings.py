@@ -91,8 +91,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # ============================
-# BASE DE DATOS (MySQL)
+# BASE DE DATOS (MySQL / Dynamic / SQLite in Test)
 # ============================
+import sys
+
+db_engine = os.getenv('DB_ENGINE', 'django.db.backends.mysql')
 db_options = {'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"}
 if os.getenv('DB_SSL', 'false').lower() in ('true', '1'):
     db_options['ssl'] = {}
@@ -120,17 +123,25 @@ if database_url:
     if 'ssl-mode=REQUIRED' in database_url or 'ssl=true' in database_url.lower():
         db_options['ssl'] = {}
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': db_name,
-        'USER': db_user,
-        'PASSWORD': db_password,
-        'HOST': db_host,
-        'PORT': db_port,
-        'OPTIONS': db_options,
+if 'test' in sys.argv and not os.getenv('DATABASE_URL') and not os.getenv('DB_PASSWORD'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': db_engine,
+            'NAME': db_name,
+            'USER': db_user,
+            'PASSWORD': db_password,
+            'HOST': db_host,
+            'PORT': db_port,
+            'OPTIONS': db_options if 'mysql' in db_engine else {},
+        }
+    }
 
 # ============================
 # CELERY CONFIG

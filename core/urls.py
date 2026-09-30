@@ -9,6 +9,7 @@ from rest_framework_simplejwt.views import (
 )
 from django.conf import settings
 from django.conf.urls.static import static
+from core.views import health_check_view
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -20,6 +21,12 @@ schema_view = get_schema_view(
     permission_classes=(permissions.AllowAny,),
 )
 urlpatterns = [
+    # Health checks para keep-alive (cron-job.org / Render / UptimeRobot)
+    path('health', health_check_view, name='health-check-root'),
+    path('health/', health_check_view, name='health-check-root-slash'),
+    path('api/health', health_check_view, name='health-check-api'),
+    path('api/health/', health_check_view, name='health-check-api-slash'),
+
     path('admin/', admin.site.urls),
     path('api/security/', include('apps.security.urls')),
     path('api/general/', include('apps.general.urls')),
@@ -29,3 +36,4 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
