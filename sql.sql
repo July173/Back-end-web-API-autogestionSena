@@ -214,7 +214,7 @@ INSERT INTO `role` (`id`, `type_role`, `description`, `active`, `delete_at`) VAL
   (2, 'Aprendiz', 'Accede a sus secciones permitidas en el sistema', 1, NULL),
   (3, 'Instructor', 'Accede a sus secciones permitidas en el sistema', 1, NULL),
   (4, 'Coordinador', 'Evalúa y sigue los procesos', 1, NULL),
-  (5, 'Operador de Sofia Plus', 'Revisa las asignaciones y hace el proceso en sofia plus', 1, NULL);
+  (5, 'Operador Sofia Plus', 'Revisa las asignaciones y hace el proceso en sofia plus', 1, NULL);
 
 
 INSERT INTO `form_module` (`id`, `active`, `deleted_at`, `form_id`, `module_id`) VALUES

@@ -97,14 +97,37 @@ db_options = {'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"}
 if os.getenv('DB_SSL', 'false').lower() in ('true', '1'):
     db_options['ssl'] = {}
 
+db_name = os.getenv('DB_NAME', 'bdautogestion')
+db_user = os.getenv('DB_USER', 'root')
+db_password = os.getenv('DB_PASSWORD') or os.getenv('DB_PASS', '')
+db_host = os.getenv('DB_HOST', 'localhost')
+db_port = os.getenv('DB_PORT', '3306')
+
+database_url = os.getenv('DATABASE_URL')
+if database_url:
+    from urllib.parse import urlparse, unquote
+    parsed_url = urlparse(database_url)
+    if parsed_url.username:
+        db_user = unquote(parsed_url.username)
+    if parsed_url.password:
+        db_password = unquote(parsed_url.password)
+    if parsed_url.hostname:
+        db_host = parsed_url.hostname
+    if parsed_url.port:
+        db_port = str(parsed_url.port)
+    if parsed_url.path and len(parsed_url.path) > 1:
+        db_name = unquote(parsed_url.path.lstrip('/'))
+    if 'ssl-mode=REQUIRED' in database_url or 'ssl=true' in database_url.lower():
+        db_options['ssl'] = {}
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME', 'bdautogestion'),
-        'USER': os.getenv('DB_USER', 'root'),
-        'PASSWORD': os.getenv('DB_PASSWORD') or os.getenv('DB_PASS', ''),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '3306'),
+        'NAME': db_name,
+        'USER': db_user,
+        'PASSWORD': db_password,
+        'HOST': db_host,
+        'PORT': db_port,
         'OPTIONS': db_options,
     }
 }

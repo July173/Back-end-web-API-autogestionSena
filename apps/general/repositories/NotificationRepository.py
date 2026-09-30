@@ -54,7 +54,7 @@ class NotificationRepository:
         """Devuelve notificaciones del usuario con rol 'Operador Sofia Plus'."""
         return self.model.objects.filter(
             id_user__id=sofia_operator_id,
-            id_user__role__type_role__iexact='Operador Sofia Plus'
+            id_user__role__type_role__in=['Operador Sofia Plus', 'Operador de Sofia Plus']
         ).order_by('-created_at')
 
     #---- GetById Notification ----#
@@ -114,7 +114,7 @@ class NotificationRepository:
         """Desactiva (active=False) todas las notificaciones del usuario con rol 'Operador Sofia Plus'."""
         qs = self.model.objects.filter(
             id_user__id=sofia_operator_id,
-            id_user__role__type_role__iexact='Operador Sofia Plus',
+            id_user__role__type_role__in=['Operador Sofia Plus', 'Operador de Sofia Plus'],
             active=True
         )
         updated = qs.update(active=False)
