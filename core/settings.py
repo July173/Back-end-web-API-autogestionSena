@@ -83,7 +83,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # ============================
 db_options = {'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"}
 if os.getenv('DB_SSL', 'false').lower() in ('true', '1'):
-    db_options['ssl_mode'] = 'REQUIRED'
+    db_options['ssl'] = {}
 
 DATABASES = {
     'default': {
