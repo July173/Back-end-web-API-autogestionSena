@@ -81,15 +81,19 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # ============================
 # BASE DE DATOS (MySQL)
 # ============================
+db_options = {'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"}
+if os.getenv('DB_SSL', 'false').lower() in ('true', '1'):
+    db_options['ssl_mode'] = 'REQUIRED'
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
-        'OPTIONS': {'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"},
+        'NAME': os.getenv('DB_NAME', 'bdautogestion'),
+        'USER': os.getenv('DB_USER', 'root'),
+        'PASSWORD': os.getenv('DB_PASSWORD') or os.getenv('DB_PASS', ''),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '3306'),
+        'OPTIONS': db_options,
     }
 }
 
@@ -180,7 +184,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ============================
 # CORS
 # ============================
-CORS_ALLOWED_ORIGINS = [
+DEFAULT_CORS_ORIGINS = [
     "http://167.114.98.199",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
@@ -191,18 +195,31 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8080",
 ]
 
+env_cors = os.getenv('CORS_ALLOWED_ORIGINS')
+if env_cors:
+    CORS_ALLOWED_ORIGINS = DEFAULT_CORS_ORIGINS + [origin.strip() for origin in env_cors.split(',') if origin.strip()]
+else:
+    CORS_ALLOWED_ORIGINS = DEFAULT_CORS_ORIGINS
+
+if os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() in ('true', '1'):
+    CORS_ALLOW_ALL_ORIGINS = True
+
 # Allow cookies/credentials from the browser when using `fetch(..., credentials: 'include')`
 CORS_ALLOW_CREDENTIALS = True
 
-# CSRF and session cookie settings helpful in local dev for cross-origin requests
-# Note: In production you should set SECURE flags and tighten origins accordingly.
-CSRF_TRUSTED_ORIGINS = [
+DEFAULT_CSRF_ORIGINS = [
     "http://167.114.98.199",
     'http://localhost:8080',
     'http://127.0.0.1:8080',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
 ]
+
+env_csrf = os.getenv('CSRF_TRUSTED_ORIGINS')
+if env_csrf:
+    CSRF_TRUSTED_ORIGINS = DEFAULT_CSRF_ORIGINS + [origin.strip() for origin in env_csrf.split(',') if origin.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = DEFAULT_CSRF_ORIGINS
 
 # For cross-site cookie usage during development you may need to relax SameSite.
 # If you use HTTPS in production, set SESSION_COOKIE_SECURE = True and CSRF_COOKIE_SECURE = True.
